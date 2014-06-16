@@ -1,15 +1,19 @@
+from __future__ import division
 import libtcodpy as libtcod
-import math, textwrap
+import math, textwrap, time, sys
+
+DEBUG = False
+DEBUGMSG = False
 
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
 
 LIMIT_FPS = 20
 
+LEAF_MIN = 8
+LEAF_MAX = 20
 
 INVENTORY_WIDTH = 50
-
-LIGHTNING_RANGE = 5
 
 BAR_WIDTH = 20
 PANEL_HEIGHT = 7
@@ -22,9 +26,11 @@ MSG_HEIGHT = PANEL_HEIGHT - 1
 MAP_WIDTH = 80
 MAP_HEIGHT = 43
 
-ROOM_MAX_SIZE = 10
-ROOM_MIN_SIZE = 6
+ROOM_MAX_SIZE = 20
+ROOM_MIN_SIZE = 8
 MAX_ROOMS = 30
+
+RANDOM_HALLS = 10
 
 MAX_ROOM_MONSTERS = 3
 MAX_ROOM_ITEMS = 2
@@ -39,7 +45,10 @@ RESULT_CANCELLED = 0
 
 FOV_ALGO = 0
 FOV_LIGHT_WALLS = True
-LIGHT_RADIUS = 10
+if DEBUG:
+	LIGHT_RADIUS = 1000
+else:
+	LIGHT_RADIUS = 10
 
 CHAR_PLAYER = '@'
 CHAR_NPC    = 'N'
@@ -57,10 +66,15 @@ KEYS_EXIT = [libtcod.KEY_ESCAPE]
 KEYS_FULLSCREEN = [libtcod.KEY_F11]
 KEYS_INVENTORY = ['i']
 
-COLOR_DARK_WALL = libtcod.Color(0,0,100)
-COLOR_LIGHT_WALL = libtcod.Color(130,110,50)
-COLOR_DARK_GROUND = libtcod.Color(50,50,150)
-COLOR_LIGHT_GROUND = libtcod.Color(200,180,50)
+COLOR_DARK_WALL_BG = libtcod.Color(0,0,0)
+COLOR_DARK_WALL_FG = libtcod.Color(41,16,2)
+COLOR_LIGHT_WALL_BG = libtcod.Color(0,0,0)
+COLOR_LIGHT_WALL_FG = libtcod.Color(85,41,15)
+
+COLOR_DARK_GROUND_BG = libtcod.Color(0,0,0)
+COLOR_DARK_GROUND_FG = libtcod.Color(39,39,39)
+COLOR_LIGHT_GROUND_BG = libtcod.Color(0,0,0)
+COLOR_LIGHT_GROUND_FG = libtcod.Color(129,129,129)
 
 spells = {
 	'lightning': {
@@ -83,6 +97,118 @@ items = {
 		}
 	}
 }
+
+class Leaf:
+	def __init__(self, x, y, w, h):
+		self.x = x
+		self.y = y
+		self.width = w
+		self.height = h
+		self.room = None
+		self.left = None
+		self.right = None
+
+	def get_room(self):
+		if self.room != None:
+			return self.room
+
+		if self.left != None:
+			lroom = self.left.get_room()
+		if self.right != None:
+			rroom = self.right.get_room()
+
+		if lroom == None and rroom == None:
+			return None
+		elif rroom == None:
+			return lroom
+		elif lroom == None:
+			return rroom
+		elif libtcod.random_get_int(0,1,100) > 50:
+			return lroom
+		else:
+			return rroom
+		
+	def get_random_room(self):
+		if self.room != None:
+			return self.room
+
+		if self.left != None or self.right != None:
+			return self.left.get_random_room() if libtcod.random_get_int(0,1,100) > 50 else self.right.get_random_room()
+		else:
+			return None
+
+	def split(self):
+		if DEBUGMSG: print "Splitting %s %s..." % (self.x, self.y),
+		if self.left != None or self.right != None:
+			if DEBUGMSG: print "Already split"
+			return False
+		random = False
+
+		if (self.width > self.height) and (self.height/self.width) <=  0.25:
+			if DEBUGMSG: print "vsplit %f" % (self.height/self.width),
+			split = False
+		elif (self.height > self.width) and (self.width / self.height) <= 0.25:
+			if DEBUGMSG: print "hsplit % f" % (self.width / self.height),
+			split = True
+		else:
+			if DEBUGMSG: print "random",
+			random = True
+			split = libtcod.random_get_int(0,1,100) > 50
+
+		maxlen = (self.height if split else self.width) - LEAF_MIN
+
+		if maxlen < LEAF_MIN:
+			if DEBUGMSG: print "Too small, not splitting"
+			return False
+
+		splitspot = libtcod.random_get_int(0,LEAF_MIN, maxlen)
+		if DEBUGMSG: print "%s w - %s h - %s max - %f spot - %f" % (("Horizontal" if split else "Vertical"), self.width, self.height, maxlen, splitspot)
+
+		if split:
+			self.left = Leaf(self.x, self.y, self.width, splitspot)
+			self.right = Leaf(self.x, self.y + splitspot, self.width, self.height - splitspot)
+		else:
+			self.left = Leaf(self.x, self.y, splitspot, self.height)
+			self.right = Leaf(self.x + splitspot, self.y, self.width - splitspot, self.height)
+		
+		if self.left.width > LEAF_MAX or self.left.height > LEAF_MAX or libtcod.random_get_int(0,1,100) > 715:
+			if DEBUGMSG: print "Left ",
+			self.left.split()
+		if self.right.width > LEAF_MAX or self.right.height > LEAF_MAX or libtcod.random_get_int(0,1,100) > 175:
+			if DEBUGMSG: print "Right ",
+			self.right.split()
+		return True
+
+	def create_rooms(self):
+		global level_map
+
+		if self.left != None or self.right != None:
+			if self.left != None:
+				self.left.create_rooms()
+			if self.right != None:
+				self.right.create_rooms()
+
+			if self.left != None and self.right != None:
+				create_hall(self.left.get_room(), self.right.get_room())
+
+		else:
+			w = libtcod.random_get_int(0,ROOM_MIN_SIZE,self.width - 1)
+			h = libtcod.random_get_int(0,ROOM_MIN_SIZE,self.height - 1)
+
+			rx = libtcod.random_get_int(0, 0, self.width - w - 1)
+			ry = libtcod.random_get_int(0, 0, self.height - h - 1)
+
+			self.room = Rect(self.x + rx, self.y + ry, w, h)
+			
+			if DEBUGMSG: print "MR POS: (%s,%s) LD: (%sx%s) RP: (%s,%s) RD: (%sx%s)" % (self.x,self.y,self.width,self.height,self.room.x1,self.room.y1,w,h)
+			for x in range(self.room.x1 + 1, self.room.x2):
+				for y in range(self.room.y1 + 1, self.room.y2):
+					level_map[x][y].blocked = False
+					level_map[x][y].block_sight = False
+
+			place_objects(self.room)
+
+
 
 class Item:
 	def __init__(self, value=None, consumable=False, use_function=None):
@@ -121,6 +247,7 @@ class Fighter:
 			self.health -= damage
 
 		if self.health <= 0:
+			self.health = 0
 			function = self.death_function
 			if function is not None:
 				function(self.owner)
@@ -230,8 +357,8 @@ class Rect:
 		self.y2 = y + h
 
 	def center(self):
-		center_x = (self.x1 + self.x2) / 2
-		center_y = (self.y1 + self.y2) / 2
+		center_x = (self.x1 + self.x2) // 2
+		center_y = (self.y1 + self.y2) // 2
 		return (center_x, center_y)
 
 	def intersect(self, other):
@@ -399,13 +526,17 @@ def place_objects(room):
 		objects.append(item)
 		item.send_to_back()
 
-def create_room(room):
-	global level_map
-	
-	for x in range(room.x1 +1, room.x2):
-		for y in range(room.y1 +1, room.y2):
-			level_map[x][y].blocked = False
-			level_map[x][y].block_sight = False
+def create_hall(room1, room2):
+
+	prev_x, prev_y = room1.center()
+	new_x, new_y = room2.center()
+
+	if libtcod.random_get_int(0, 0, 1) == 1:
+		create_h_tunnel(prev_x, new_x, prev_y)
+		create_v_tunnel(prev_y, new_y, new_x)
+	else:
+		create_v_tunnel(prev_y, new_y, new_x)
+		create_h_tunnel(prev_x, new_x, prev_y)
 
 def create_h_tunnel(x1, x2, y):
 	global level_map
@@ -426,47 +557,16 @@ def make_map():
 
 	level_map = [[ Tile(True) for y in range(MAP_HEIGHT)] for x in range(MAP_WIDTH)]
 
-	rooms = []
-	num_rooms = 0
+	leafs = []
+	root_leaf = Leaf(0, 0, MAP_WIDTH, MAP_HEIGHT)
+	root_leaf.split()
 
-	for r in range(MAX_ROOMS):
-		w = libtcod.random_get_int(0, ROOM_MIN_SIZE, ROOM_MAX_SIZE)
-		h = libtcod.random_get_int(0, ROOM_MIN_SIZE, ROOM_MAX_SIZE)
+	root_leaf.create_rooms()
 
-		x = libtcod.random_get_int(0, 0, MAP_WIDTH - w - 1)
-		y = libtcod.random_get_int(0, 0, MAP_HEIGHT - h - 1)
+	for i in range(RANDOM_HALLS):
+		create_hall(root_leaf.get_random_room(),root_leaf.get_random_room())
 
-		new_room = Rect(x, y, w, h)
-
-		failed = False
-		for other_room in rooms:
-			if new_room.intersect(other_room):
-				failed = True
-				break
-
-		if not failed:
-			create_room(new_room)
-
-			place_objects(new_room)
-
-			(new_x, new_y) = new_room.center()
-
-			if num_rooms == 0:
-				player.x = new_x
-				player.y = new_y
-
-			else:
-				(prev_x, prev_y) = rooms[num_rooms-1].center()
-
-				if libtcod.random_get_int(0, 0, 1) == 1:
-					create_h_tunnel(prev_x, new_x, prev_y)
-					create_v_tunnel(prev_y, new_y, new_x)
-				else:
-					create_v_tunnel(prev_y, new_y, new_x)
-					create_h_tunnel(prev_x, new_x, prev_y)
-
-			rooms.append(new_room)
-			num_rooms += 1
+	player.x, player.y = root_leaf.get_random_room().center()
 
 
 def render_all():
@@ -481,11 +581,17 @@ def render_all():
 			visible = libtcod.map_is_in_fov(fov_map, x, y)
 
 			if visible:
-					libtcod.console_set_char_background(con, x, y,  COLOR_LIGHT_WALL if level_map[x][y].blocked else COLOR_LIGHT_GROUND, libtcod.BKGND_SET)
+					if level_map[x][y].blocked:
+						libtcod.console_put_char_ex(con, x, y, CHAR_WALL, COLOR_LIGHT_WALL_FG, COLOR_LIGHT_WALL_BG)
+					else:
+						libtcod.console_put_char_ex(con, x, y, CHAR_GROUND, COLOR_LIGHT_GROUND_FG,COLOR_LIGHT_GROUND_BG)
 					level_map[x][y].explored = True
 			else:
 				if level_map[x][y].explored:
-					libtcod.console_set_char_background(con, x, y,  COLOR_DARK_WALL if level_map[x][y].blocked else COLOR_DARK_GROUND, libtcod.BKGND_SET)
+					if level_map[x][y].blocked:
+						libtcod.console_put_char_ex(con, x, y, CHAR_WALL, COLOR_DARK_WALL_FG, COLOR_DARK_WALL_BG)
+					else:
+						libtcod.console_put_char_ex(con, x, y, CHAR_GROUND,COLOR_DARK_GROUND_FG,COLOR_DARK_GROUND_BG)
 
 	for obj in objects:
 		if obj != player:
@@ -563,7 +669,7 @@ def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
 		libtcod.console_rect(panel, x, y, bar_width, 1, False, libtcod.BKGND_SCREEN)
 
 	libtcod.console_set_default_foreground(panel, libtcod.white)
-	libtcod.console_print_ex(panel, x + total_width / 2, y, libtcod.BKGND_NONE, libtcod.CENTER,'%s: %s/%s' % (name,value,maximum))
+	libtcod.console_print_ex(panel, x + total_width // 2, y, libtcod.BKGND_NONE, libtcod.CENTER,'%s: %s/%s' % (name,value,maximum))
 
 def message(new_msg, color = libtcod.white):
 	new_msg_lines = textwrap.wrap(new_msg, MSG_WIDTH)
@@ -603,8 +709,8 @@ def menu(header, options, width):
 		y += 1
 		letter_index += 1
 
-	x = SCREEN_WIDTH/2 - width/2
-	y = SCREEN_HEIGHT/2 - height/2
+	x = SCREEN_WIDTH//2 - width//2
+	y = SCREEN_HEIGHT//2 - height//2
 	libtcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, 0.7)
 
 	libtcod.console_flush()
@@ -633,7 +739,7 @@ con = libtcod.console_new(MAP_WIDTH, MAP_HEIGHT)
 panel = libtcod.console_new(SCREEN_WIDTH, PANEL_HEIGHT)
 
 
-player = Object(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, CHAR_PLAYER, "Player", libtcod.white, blocks=True, fighter=Fighter(30,15,2,5, death_function=player_death))
+player = Object(SCREEN_WIDTH//2, SCREEN_HEIGHT//2, CHAR_PLAYER, "Player", libtcod.white, blocks=True, fighter=Fighter(30,15,2,5, death_function=player_death))
 
 game_state = STATE_PLAYING
 player_action = ACTION_NONE
@@ -653,7 +759,10 @@ make_map()
 fov_map = libtcod.map_new(MAP_WIDTH, MAP_HEIGHT)
 for y in range(MAP_HEIGHT):
 	for x in range(MAP_WIDTH):
-		libtcod.map_set_properties(fov_map, x, y, not level_map[x][y].block_sight, not level_map[x][y].blocked)
+		if DEBUG:
+			libtcod.map_set_properties(fov_map, x, y, True, True)
+		else:
+			libtcod.map_set_properties(fov_map, x, y, not level_map[x][y].block_sight, not level_map[x][y].blocked)
 
 fov_recompute = True
 

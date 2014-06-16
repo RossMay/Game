@@ -4,6 +4,26 @@
 		"selected_items":
 		[
 			[
+				"LEA",
+				"LEAF_MAX"
+			],
+			[
+				"MAP_H",
+				"MAP_WIDTH"
+			],
+			[
+				"ran",
+				"random_get_int"
+			],
+			[
+				"x",
+				"x1"
+			],
+			[
+				"CHAR",
+				"CHAR_WALL"
+			],
+			[
 				"dark",
 				"darker_green"
 			],
@@ -60,10 +80,6 @@
 				"MAX_ROOM_MONSTERS"
 			],
 			[
-				"x",
-				"x"
-			],
-			[
 				"M",
 				"MAP_WIDTH"
 			],
@@ -83,7 +99,7 @@
 			"file": "game.py",
 			"settings":
 			{
-				"buffer_size": 17988,
+				"buffer_size": 21470,
 				"line_ending": "Windows"
 			}
 		}
@@ -135,6 +151,19 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"print",
+			"/",
+			"int(",
+			"/",
+			"create_room",
+			"create_rooms",
+			"create_room",
+			"= none",
+			"LEAF_MAX ",
+			"color_light",
+			"color_dark",
+			"COLOR_DARK_WALL",
+			"COLOR_DARK_WALL_BG",
 			"items",
 			"print",
 			"Power",
@@ -174,15 +203,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 17988,
+						"buffer_size": 21470,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4148,
-								4148
+								6365,
+								6365
 							]
 						],
 						"settings":
@@ -191,7 +220,7 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 9524.0,
+						"translation.y": 3915.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,
@@ -242,7 +271,7 @@
 	"project": "game.sublime-project",
 	"replace":
 	{
-		"height": 62.0
+		"height": 42.0
 	},
 	"save_all_on_build": true,
 	"select_file":
