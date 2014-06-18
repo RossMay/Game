@@ -267,7 +267,12 @@ class Fighter:
 		self.max_mana = mana
 		self.mana = mana
 		self.defense = defense
-		self.power = power
+
+		if not len(power):
+			power = (power,power)
+
+		self.power_min = power[0]
+		self.power_max = power[1]
 
 	def take_damage(self, damage):
 		if damage > 0:
@@ -280,7 +285,7 @@ class Fighter:
 				function(self.owner)
 
 	def attack(self, target):
-		damage = self.power - target.fighter.defense
+		damage = rand(0,self.power_min,self.power_max) - target.fighter.defense
 
 		if damage > 0:
 			message("%s attacks %s for %s damage." % (self.owner.name.capitalize(), target.name, damage), libtcod.white)
@@ -305,7 +310,7 @@ def spawn_monster(x, y, monster):
 								hp=monster['hp'],
 								mana=monster['mana'],
 								defense=monster['defense'],
-								power=monster['power'], 
+								power=(monster['power_min'],monster['power_max']), 
 								death_function=monster['death_function']
 							), 
 					ai=monster['ai']()
@@ -760,8 +765,6 @@ def place_objects(room):
 
 		spawn_monster(x, y, monster)
 
-		objects.append(monster)
-
 	num_items = rand(0, 0, MAX_ROOM_ITEMS)
 	for i in range(num_items):
 		while True:
@@ -1107,40 +1110,44 @@ monsters = {
 		'hp': 10,
 		'mana': 0,
 		'defense': 1,
-		'power': 3,
+		'power_min': 2,
+		'power_max': 4,
 		'death_function': monster_death,
 		'ai': BasicMonster
 	},
 	'troll': {
 		'name': 'Troll',
-		'char': 'O',
+		'char': 'T',
 		'color': libtcod.darker_green,
 		'hp': 16,
 		'mana': 0,
 		'defense': 1,
-		'power': 4,
+		'power_min': 3,
+		'power_max': 5,
 		'death_function': monster_death,
 		'ai': BasicMonster
 	},
 	'zombie': {
 		'name': 'Zombie',
-		'char': 'O',
+		'char': 'Z',
 		'color': libtcod.copper,
 		'hp': 18,
 		'mana': 0,
 		'defense': 0,
-		'power': 3,
+		'power_min': 2,
+		'power_max': 4,
 		'death_function': monster_death,
 		'ai': BasicMonster
 	},
 	'bat': {
 		'name': 'Bat',
-		'char': 'O',
+		'char': 'B',
 		'color': libtcod.silver,
 		'hp': 7,
 		'mana': 0,
 		'defense': 0,
-		'power': 2,
+		'power_min': 1,
+		'power_max': 3,
 		'death_function': monster_death,
 		'ai': BasicMonster
 	}	
@@ -1205,6 +1212,20 @@ items = {
 	}
 }
 
+##################################################################################################################################
+#	Default Player Values																										 #
+##################################################################################################################################
+
+player_config = {
+	'name': 'Player',
+	'char': CHAR_PLAYER,
+	'color': libtcod.white,
+	'hp': 30,
+	'mana': 15,
+	'defense': 2,
+	'power_min': 4,
+	'power_max': 7
+}
 
 ##################################################################################################################################
 #	Setup																														 #
@@ -1220,17 +1241,17 @@ libtcod.console_set_key_color(spell_con,COLOR_TRANSPARENT)
 
 
 player = Object(
-			x=SCREEN_WIDTH//2, 
-			y=SCREEN_HEIGHT//2, 
-			char=CHAR_PLAYER, 
-			name="Player", 
-			color=libtcod.white, 
+			x=0, 
+			y=0, 
+			char=player_config['char'], 
+			name=player_config['name'], 
+			color=player_config['color'], 
 			blocks=True, 
 			fighter=Fighter(
-				hp=30,
-				mana=15,
-				defense=2,
-				power=5, 
+				hp=player_config['hp'],
+				mana=player_config['mana'],
+				defense=player_config['defense'],
+				power=(player_config['power_min'],player_config['power_max']), 
 				death_function=player_death
 				)
 			)

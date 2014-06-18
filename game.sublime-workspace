@@ -99,7 +99,7 @@
 			"file": "game.py",
 			"settings":
 			{
-				"buffer_size": 21470,
+				"buffer_size": 50671,
 				"line_ending": "Windows"
 			}
 		}
@@ -115,10 +115,7 @@
 	},
 	"console":
 	{
-		"height": 126.0,
-		"history":
-		[
-		]
+		"height": 126.0
 	},
 	"distraction_free":
 	{
@@ -151,6 +148,7 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			".power",
 			"print",
 			"/",
 			"int(",
@@ -200,18 +198,17 @@
 				{
 					"buffer": 0,
 					"file": "game.py",
-					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 21470,
+						"buffer_size": 50671,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								6365,
-								6365
+								13501,
+								13501
 							]
 						],
 						"settings":
@@ -220,10 +217,9 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 3915.0,
+						"translation.y": 3896.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
 					"type": "text"
 				}
 			]
@@ -268,7 +264,6 @@
 	{
 		"height": 0.0
 	},
-	"project": "game.sublime-project",
 	"replace":
 	{
 		"height": 42.0
@@ -290,24 +285,10 @@
 		],
 		"width": 0.0
 	},
-	"select_symbol":
-	{
-		"height": 0.0,
-		"selected_items":
-		[
-		],
-		"width": 0.0
-	},
-	"settings":
-	{
-	},
 	"show_minimap": true,
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
 	"side_bar_width": 150.0,
-	"status_bar_visible": true,
-	"template_settings":
-	{
-	}
+	"status_bar_visible": true
 }
