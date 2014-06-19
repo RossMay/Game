@@ -4,6 +4,82 @@
 		"selected_items":
 		[
 			[
+				"clos",
+				"closest"
+			],
+			[
+				"x",
+				"x"
+			],
+			[
+				"distance",
+				"distance_to_point"
+			],
+			[
+				"dis",
+				"distance_to_point"
+			],
+			[
+				"curren",
+				"current_spell"
+			],
+			[
+				"Actio",
+				"ACTION_NONE"
+			],
+			[
+				"CANCE",
+				"RESULT_CANCELLED"
+			],
+			[
+				"tatg",
+				"target_coords"
+			],
+			[
+				"curre",
+				"current_spell"
+			],
+			[
+				"distan",
+				"distance_to"
+			],
+			[
+				"STATE",
+				"STATE_TARGET"
+			],
+			[
+				"red",
+				"light_red"
+			],
+			[
+				"STA",
+				"STATE_TARGET"
+			],
+			[
+				"Ac",
+				"ACTION_NONE"
+			],
+			[
+				"cast_",
+				"cast_function"
+			],
+			[
+				"TR",
+				"CONSOLE_TRANSPARENT_COLOR"
+			],
+			[
+				"targe",
+				"target_coords"
+			],
+			[
+				"spell",
+				"spell_con"
+			],
+			[
+				"game",
+				"game_state"
+			],
+			[
 				"LEA",
 				"LEAF_MAX"
 			],
@@ -16,10 +92,6 @@
 				"random_get_int"
 			],
 			[
-				"x",
-				"x1"
-			],
-			[
 				"CHAR",
 				"CHAR_WALL"
 			],
@@ -30,10 +102,6 @@
 			[
 				"closes",
 				"closest_dist"
-			],
-			[
-				"clos",
-				"closest_enemy"
 			],
 			[
 				"dist",
@@ -99,7 +167,7 @@
 			"file": "game.py",
 			"settings":
 			{
-				"buffer_size": 50671,
+				"buffer_size": 58472,
 				"line_ending": "Windows"
 			}
 		}
@@ -115,7 +183,10 @@
 	},
 	"console":
 	{
-		"height": 126.0
+		"height": 126.0,
+		"history":
+		[
+		]
 	},
 	"distraction_free":
 	{
@@ -148,7 +219,26 @@
 		"case_sensitive": false,
 		"find_history":
 		[
-			".power",
+			"get_target_at",
+			"health",
+			"libtcod.random_get_int",
+			"random_get_int",
+			"NODE_MAX",
+			"NODE_MIN",
+			"transpar",
+			"trans",
+			"transpar",
+			"#########################################################################",
+			"NODE",
+			"LEAF",
+			"leaf",
+			"Leaf",
+			"predef",
+			"cast_lightning",
+			"player",
+			"to_point",
+			".distance",
+			"= state",
 			"print",
 			"/",
 			"int(",
@@ -182,6 +272,14 @@
 		"regex": false,
 		"replace_history":
 		[
+			"hp",
+			"rand",
+			"ROOM_MAX_SIZE",
+			"ROOM_MIN_SIZE",
+			"##################################################################################################################################",
+			"NODE",
+			"node",
+			"MapNode"
 		],
 		"reverse": false,
 		"show_context": true,
@@ -198,17 +296,18 @@
 				{
 					"buffer": 0,
 					"file": "game.py",
+					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 50671,
+						"buffer_size": 58472,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								13501,
-								13501
+								50478,
+								50478
 							]
 						],
 						"settings":
@@ -217,9 +316,10 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 3896.0,
+						"translation.y": 19460.0,
 						"zoom_level": 1.0
 					},
+					"stack_index": 0,
 					"type": "text"
 				}
 			]
@@ -258,12 +358,13 @@
 	"menu_visible": true,
 	"output.exec":
 	{
-		"height": 100.0
+		"height": 25.0
 	},
 	"output.find_results":
 	{
 		"height": 0.0
 	},
+	"project": "game.sublime-project",
 	"replace":
 	{
 		"height": 42.0
@@ -285,10 +386,24 @@
 		],
 		"width": 0.0
 	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"settings":
+	{
+	},
 	"show_minimap": true,
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
 	"side_bar_width": 150.0,
-	"status_bar_visible": true
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
 }

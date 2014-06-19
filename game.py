@@ -24,8 +24,9 @@ import math, textwrap, time, sys
 #	Debug																														 #
 ##################################################################################################################################
 
-DEBUG 		= True
-DEBUGMSG 	= False
+DEBUG 		= False
+DEBUGMSG 	= DEBUG
+DISABLE_AI	= DEBUG
 
 ##################################################################################################################################
 #	Configuration																												 #
@@ -49,10 +50,11 @@ STATE_DEAD 		= 2 	# Player died
 
 #	Player Actions
 ACTION_NONE 	= 0 	# Player did not take an action
-ACTION_EXIT 	= 1 	# Player selected quit
+ACTION_TURN		= 1 	# Player took a turn
+ACTION_EXIT 	= 2 	# Player selected quit
 
 #	Results
-RESULT_CANCELLED = 0 	# Function was cancelled (Ex. Spell is out of range)
+RESULT_CANCELLED = 1 	# Function was cancelled (Ex. Spell is out of range)
 
 #	FOV
 FOV_ALGO 		= 0		# Field of view algorithm to use (Default = 0)
@@ -60,8 +62,9 @@ FOV_LIGHT_WALLS = True	# Should the first layer of walls light up while in fov (
 
 #	UI
 INVENTORY_WIDTH = 50							# Width of the inventory menu
+SPELL_WIDTH 	= 50							# Width of the spell menu
 
-BAR_WIDTH 		= 20							# Width of health / mana bars
+BAR_WIDTH 		= 25							# Width of health / mana bars
 PANEL_HEIGHT 	= 7 							# Height of the bottom panel
 PANEL_Y 		= SCREEN_HEIGHT - PANEL_HEIGHT	# Where to start the panel
 
@@ -109,23 +112,34 @@ CHAR_SPELL_PATH = ' '	# Default spell path character
 ##################################################################################################################################
 
 #	Movement
-KEYS_UP 		= [libtcod.KEY_UP,libtcod.KEY_KP8]
-KEYS_DOWN 		= [libtcod.KEY_DOWN,libtcod.KEY_KP2]
-KEYS_LEFT 		= [libtcod.KEY_LEFT,libtcod.KEY_KP4]
-KEYS_RIGHT 		= [libtcod.KEY_RIGHT,libtcod.KEY_KP6]
+KEYS_UP 		= [libtcod.KEY_UP, libtcod.KEY_KP8]
+KEYS_DOWN 		= [libtcod.KEY_DOWN, libtcod.KEY_KP2]
+KEYS_LEFT 		= [libtcod.KEY_LEFT, libtcod.KEY_KP4]
+KEYS_RIGHT 		= [libtcod.KEY_RIGHT, libtcod.KEY_KP6]
 KEYS_UPLEFT 	= [libtcod.KEY_KP7]
 KEYS_UPRIGHT 	= [libtcod.KEY_KP9]
 KEYS_DOWNLEFT 	= [libtcod.KEY_KP1]
 KEYS_DOWNRIGHT 	= [libtcod.KEY_KP3]
-KEYS_WAIT		= [libtcod.KEY_KP5]
+KEYS_WAIT		= [libtcod.KEY_KP5, 'w']
+
+#	General
+KEYS_CONFIRM	= [libtcod.KEY_KPENTER, 'c']
+KEYS_CANCEL		= [libtcod.KEY_KPSUB, 'q']
+
+# 	Spells
+KEYS_CAST		= [libtcod.KEY_KPADD, libtcod.KEY_SPACE]
+KEYS_SPELL		= [libtcod.KEY_KPMUL, 's']
 
 #	Items
-KEYS_PICKUP 	= [',']
-KEYS_INVENTORY 	= ['i']
+KEYS_PICKUP 	= [libtcod.KEY_KP0, ',']
+KEYS_DROP		= ['d']
+KEYS_INVENTORY 	= ['i', libtcod.KEY_KPSUB]
 
 #	Other
 KEYS_EXIT 		= [libtcod.KEY_ESCAPE]
 KEYS_FULLSCREEN = [libtcod.KEY_F11]
+
+# libtcod.KEY_KPADD / SUB / DIV / MUL / DEC / ENTER
 
 ##################################################################################################################################
 #	Colors																														 #
@@ -163,14 +177,14 @@ COLOR_SPELL_TARGET_BAD_FG 		= COLOR_TRANSPARENT		# Foreground for the cell of an
 ##################################################################################################################################
 ##################################################################################################################################
 ##																																##
-##					      OOOO      BBBBBBBBB   JJJJJJJJJJJ  EEEEEEEE    CCCCCCC    TTTTTTTT   SSSSSSS 							##
+##					      OOOO      BBBBBBBBB   JJJJJJJJJJJ  EEEEEEEE    CCCCCCC    TTTTTTTT   SSSSSSSS 						##
 ##					    OO    OO    BB      BB        JJ     EE         CC      CC     TT     SS       							##
 ##					  OO        OO  BB      BB        JJ     EE        CC              TT     SS       							##
 ##					  OO        OO  BBBBBBBB          JJ     EEEEEEE   CC              TT       SSS    							##
 ##					  OO        OO  BB     BB         JJ     EE        CC              TT         SSS  							##
 ##					  OO        OO  BB      BB        JJ     EE        CC              TT            SS							##
 ##					    OO    OO    BB      BB  JJ   JJ      EE         CC      CC     TT            SS							##
-##					      OOOO      BBBBBBBBB     JJJJ       EEEEEEEE    CCCCCCC       TT      SSSSSSS 							##
+##					      OOOO      BBBBBBBBB     JJJJ       EEEEEEEE    CCCCCCC       TT     SSSSSSSS 							##
 ##																																##
 ##################################################################################################################################
 ##################################################################################################################################
@@ -224,6 +238,12 @@ class Object:
 
 		return math.sqrt(dx ** 2 + dy ** 2)
 
+	def in_range(self,x,y,d):
+		return self.distance_to_point(x,y) >= d
+
+	def object_in_range(self,obj,d):
+		return self.distance_to(obj) >= d
+
 	def draw(self):
 		if libtcod.map_is_in_fov(fov_map, self.x, self.y):
 			libtcod.console_set_default_foreground(con, self.color)
@@ -242,14 +262,14 @@ class Object:
 ##################################################################################################################################
 ##################################################################################################################################
 ##																																##
-##										  NNN     NN  PPPPPPPP      CCCCCCC     SSSSSSS 										##
+##										  NNN     NN  PPPPPPPP      CCCCCCC     SSSSSSSS 										##
 ##										  NNNN    NN  PP     PP    CC      CC  SS       										##
 ##										  NN NN   NN  PP      PP  CC           SS       										##
 ##										  NN NN   NN  PP     PP   CC             SSS    										##
 ##										  NN  NN  NN  PPPPPPP     CC               SSS  										##
 ##										  NN   NN NN  PP          CC                  SS										##
 ##										  NN    NNNN  PP           CC      CC         SS										##
-##										  NN     NNN  PP            CCCCCCC     SSSSSSS 										##
+##										  NN     NNN  PP            CCCCCCC    SSSSSSSS 										##
 ##																																##
 ##################################################################################################################################
 ##################################################################################################################################
@@ -260,13 +280,15 @@ class Object:
 ##################################################################################################################################
 
 class Fighter:
-	def __init__(self, hp, mana, defense, power, death_function=None):
+	def __init__(self, hp, mana, defense, power, death_function=None, friendly=False, enemy=True):
 		self.death_function = death_function
 		self.max_hp = hp
 		self.hp = hp
 		self.max_mana = mana
 		self.mana = mana
 		self.defense = defense
+		self.friendly = friendly
+		self.enemy = enemy
 
 		if not len(power):
 			power = (power,power)
@@ -311,7 +333,9 @@ def spawn_monster(x, y, monster):
 								mana=monster['mana'],
 								defense=monster['defense'],
 								power=(monster['power_min'],monster['power_max']), 
-								death_function=monster['death_function']
+								death_function=monster['death_function'],
+								friendly=False,
+								enemy=True
 							), 
 					ai=monster['ai']()
 				)
@@ -343,7 +367,7 @@ def spawn_monster(x, y, monster):
 class BasicMonster:
 	def take_turn(self):
 		monster = self.owner
-		return
+		if DISABLE_AI: return
 		if libtcod.map_is_in_fov(fov_map, monster.x, monster.y):
 			if monster.distance_to(player) >= 2:
 				monster.move_towards(player.x, player.y)
@@ -367,14 +391,14 @@ class ConfusedMonster:
 ##################################################################################################################################
 ##################################################################################################################################
 ##																																##
-##										IIIIIIII  TTTTTTTT  EEEEEEEE  MM         MM   SSSSSSS 									##
+##										IIIIIIII  TTTTTTTT  EEEEEEEE  MM         MM   SSSSSSSS 									##
 ##										   II        TT     EE        MMMM     MMMM  SS       									##
 ##										   II        TT     EE        MM MM   MM MM  SS       									##
 ##										   II        TT     EEEEEEE   MM  MM MM  MM    SSS    									##
 ##										   II        TT     EE        MM   MMM   MM      SSS  									##
 ##										   II        TT     EE        MM         MM         SS									##
 ##										   II        TT     EE        MM         MM         SS									##
-##										IIIIIIII     TT     EEEEEEEE  MM         MM   SSSSSSS 									##
+##										IIIIIIII     TT     EEEEEEEE  MM         MM  SSSSSSSS 									##
 ##																																##			
 ##################################################################################################################################
 ##################################################################################################################################
@@ -402,7 +426,7 @@ class Item:
 			else:
 				value = self.value
 
-			if self.use_function(value=value) != RESULT_CANCELLED and self.consumable:
+			if self.use_function(value) != RESULT_CANCELLED and self.consumable:
 				inventory.remove(self.owner)
 
 
@@ -413,6 +437,13 @@ class Item:
 			inventory.append(self.owner)
 			objects.remove(self.owner)
 			message("You picked up a %s." % self.owner.name, libtcod.green)
+
+	def drop(self):
+		objects.append(self.owner)
+		inventory.remove(self.owner)
+		self.owner.x = player.x
+		self.owner.y = player.y
+		message("You dropped a %s." % self.owner.name, libtcod.yellow)
 
 def spawn_item(x, y, item):
 
@@ -439,14 +470,14 @@ def spawn_item(x, y, item):
 ##################################################################################################################################
 ##################################################################################################################################
 ##																																##
-##								 SSSSSSS   PPPPPPPP    EEEEEEEE  LL        LL         SSSSSSS 									##
+##								 SSSSSSSS  PPPPPPPP    EEEEEEEE  LL        LL         SSSSSSSS 									##
 ##								SS         PP     PP   EE        LL        LL        SS 										##
 ##								SS         PP      PP  EE        LL        LL        SS 										##
 ##								  SSS      PP     PP   EEEEEEE   LL        LL          SSS 										##
 ##								    SSS    PPPPPPP     EE        LL        LL            SSS 									##
 ##								       SS  PP          EE        LL        LL               SS 									##
 ##								       SS  PP          EE        LL        LL               SS 									##
-##								 SSSSSSS   PP          EEEEEEEE  LLLLLLLL  LLLLLLLL  SSSSSSSS									##
+##								SSSSSSSS   PP          EEEEEEEE  LLLLLLLL  LLLLLLLL  SSSSSSSS									##
 ##																																##
 ##################################################################################################################################
 ##################################################################################################################################
@@ -456,55 +487,118 @@ def spawn_item(x, y, item):
 #	Cast functions																												 #
 ##################################################################################################################################
 
-def cast_heal(value):
+def cast_heal(spell, x=None, y=None):
+	amount = rand(0, spell['min'], spell['max'])
 
-	amount = rand(0, value['min'], value['max'])
+	if x == None:
+		target = player
+	else:
+		target = get_target_at(x,y,friendly=spell['friendly'], enemy=spell['enemy'], self=spell['self'])
+		if target is None:
+			message('Invalid target.', libtcod.red)
+			return RESULT_CANCELLED
+		elif player.distance_to(target) > spell['range']:
+			message('Target is out of range.', libtcod.red)
+			return RESULT_CANCELLED
 
-	if player.fighter.hp == player.fighter.max_hp:
-		message('You are already at full health.', libtcod.red)
+
+	if target.fighter.hp == target.fighter.max_hp:
+		if target == player:
+			message('You are already at full health.', libtcod.red)
+		else:
+			message('%s is already at full health.' % target.name, libtcod.red)
 		return RESULT_CANCELLED
+
+	if target == player:
+		message('You restored %s health!' % amount, libtcod.light_green)
+	else:
+		message('%s restored %s health!' % (target.name,amount), libtcod.light_green)
+	target.fighter.heal(amount)
+
+def cast_lightning(spell, x=None, y=None):
+	damage = rand(0, spell['min'], spell['max'])
+
+	if x == None:
+		target = closest_monster(spell['range'])
+		if target is None:
+			message('No enemy in range.', libtcod.red)
+			return RESULT_CANCELLED
+	else:
+		target = get_target_at(x,y,friendly=spell['friendly'], enemy=spell['enemy'], self=spell['self'])
+		if target is None:
+			message('Invalid target.', libtcod.red)
+			return RESULT_CANCELLED
+		elif player.distance_to(target) > spell['range']:
+			message('Target is out of range.', libtcod.red)
+			return RESULT_CANCELLED
+
+	message('%s strikes %s for %s damage.' % (spell['name'], target.name, damage), libtcod.light_blue)
+	target.fighter.take_damage(damage)
+
+def cast_confuse(spell, x=None, y=None):	
+	duration = rand(0, spell['min_duration'], spell['max_duration'])
+
+	if x == None:
+		target = closest_monster(spell['range'])
+		if target is None:
+			message('No enemy in range.', libtcod.red)
+			return RESULT_CANCELLED
+	else:
+		target = get_target_at(x,y)
+		if target is None:
+			message('Invalid target.', libtcod.red)
+			return RESULT_CANCELLED
+		elif player.distance_to(target) > spell['range']:
+			message('Target is out of range.', libtcod.red)
+			return RESULT_CANCELLED
+
+	old_ai = target.ai
+	target.ai = ConfusedMonster(old_ai, duration=duration)
+	target.ai.owner = target
+	message('%s is now confused for %s turns.' % (target.name, duration), libtcod.light_blue)
+
+def cast_fireball(spell, x=None, y=None):
+	damage = rand(0, spell['min'], spell['max'])
+
+	if x == None:
+		closest = closest_monster(spell['range'])
+		if closest is None:
+			message('No enemy in range.', libtcod.red)
+			return RESULT_CANCELLED
+		else:
+			x = closest.x
+			y = closest.y
 	
-	message('You restored %s health!' % amount, libtcod.light_green)
-	player.fighter.heal(amount)
-
-def cast_lightning(value):
-
-	damage = rand(0, value['min'], value['max'])
-
-	monster = closest_monster(value['range'])
-	if monster is None:
-		message('No enemy in range.', libtcod.red)
+	if player.in_range(x,y,spell['range']):
+		message('Target is out of range.', libtcod.red)
 		return RESULT_CANCELLED
 
-	message('%s strikes %s for %s damage.' % (value.get('name', 'Lightning'), monster.name, damage), libtcod.light_blue)
-	monster.fighter.take_damage(damage)
+	targets = get_targets_around(x,y,spell['radius'],friendly=spell['friendly'], enemy=spell['enemy'], self=spell['self'])
 
-def cast_confuse(value):
-	
-	duration = rand(0, value['min_duration'], value['max_duration'])
+	if not len(targets):
+		message('Nothing was hit by the fireball', libtcod.red)
+		return
 
-	monster = closest_monster(value['range'])
-	if monster is None:
-		message('No enemy in range.', libtcod.red)
-		return RESULT_CANCELLED
+	for target in targets:
+		message('%s strikes %s for %s damage.' % (spell['name'], target.name, damage), libtcod.light_blue)
+		target.fighter.take_damage(damage)
 
-	old_ai = monster.ai
-	monster.ai = ConfusedMonster(old_ai, duration=duration)
-	monster.ai.owner = monster
-	message('The %s is now confused for %s turns.' % (monster.name, duration), libtcod.light_blue)
+def move_target(dx, dy):
+	global target_coords
+	target_coords = (target_coords[0] + dx, target_coords[1] + dy)
 
 
 ##################################################################################################################################
-################################################################I#################################################################
+##################################################################################################################################
 ##																																##
-##								EEEEEEEE  VV      VV  EEEEEEEE  NNN     NN  TTTTTTTT   SSSSSSS  								##
+##								EEEEEEEE  VV      VV  EEEEEEEE  NNN     NN  TTTTTTTT   SSSSSSSS  								##
 ##								EE        VV      VV  EE        NNNN    NN     TT     SS        								##
 ##								EE         VV    VV   EE        NN NN   NN     TT     SS        								##
 ##								EEEEEEE    VV    VV   EEEEEEE   NN NN   NN     TT       SSS     								##
 ##								EE          VV  VV    EE        NN  NN  NN     TT         SSS   								##
 ##								EE          VV  VV    EE        NN   NN NN     TT            SS 								##
 ##								EE           VVVV     EE        NN    NNNN     TT            SS 								##
-##								EEEEEEEE      VV      EEEEEEEE  NN     NNN     TT      SSSSSSS  								##
+##								EEEEEEEE      VV      EEEEEEEE  NN     NNN     TT     SSSSSSSS  								##
 ##																																##			
 ##################################################################################################################################
 ##################################################################################################################################
@@ -787,14 +881,14 @@ def place_objects(room):
 ##################################################################################################################################
 ##################################################################################################################################
 ##																																##
-##				  UU      UU  TTTTTTTT  IIIIIIII  LL        IIIIIIII  TTTTTTTT  IIIIIIII  EEEEEEEE   SSSSSSS   					##
+##				  UU      UU  TTTTTTTT  IIIIIIII  LL        IIIIIIII  TTTTTTTT  IIIIIIII  EEEEEEEE   SSSSSSSS  					##
 ##				  UU      UU     TT        II     LL           II        TT        II     EE        SS         					##
 ##				  UU      UU     TT        II     LL           II        TT        II     EE        SS         					##
 ##			  	  UU	  UU     TT        II     LL           II        TT        II     EEEEEEE     SSS      					##
 ##				  UU      UU     TT        II     LL           II        TT        II     EE            SSS    					##
 ##				  UU      UU     TT        II     LL           II        TT        II     EE               SS  					##
 ##				  UU      UU     TT        II     LL           II        TT        II     EE               SS  					##
-##				    UUUUUU       TT     IIIIIIII  LLLLLLLL  IIIIIIII     TT     IIIIIIII  EEEEEEEE   SSSSSSS   					##
+##				    UUUUUU       TT     IIIIIIII  LLLLLLLL  IIIIIIII     TT     IIIIIIII  EEEEEEEE  SSSSSSSS   					##
 ##																																##			
 ##################################################################################################################################
 ##################################################################################################################################
@@ -821,6 +915,53 @@ def closest_monster(max_range):
 				closest_enemy = obj
 				closest_dist = dist
 	return closest_enemy
+
+def get_target_at(x,y, friendly=None, enemy=None, self=False):
+	for obj in objects:
+		if obj.fighter and obj.x == x and obj.y == y and libtcod.map_is_in_fov(fov_map, obj.x, obj.y):
+
+			if self and obj == player:
+				return obj
+			elif not self and obj == player:
+				continue
+
+			if friendly is not None and friendly and obj.fighter.friendly:
+				return obj
+			elif friendly is not None and not friendly and obj.fighter.friendly:
+				continue
+
+			if enemy is not None and enemy and obj.fighter.enemy:
+				return obj
+			elif enemy is not None and not enemy and obj.fighter.enemy:
+				continue
+
+			return obj
+	return None
+
+def get_targets_around(x,y,radius, friendly=None, enemy=None, self=False):
+	targets = []
+	for obj in objects:
+		if obj.fighter and obj.distance_to_point(x,y) <= radius and libtcod.map_is_in_fov(fov_map, obj.x, obj.y):
+
+			if self and obj == player:
+				targets.append(obj)
+				continue
+			elif not self and obj == player:
+				continue
+
+			if friendly is not None and friendly and obj.fighter.friendly:
+				targets.append(obj)
+				continue
+			elif friendly is not None and not friendly and obj.fighter.friendly:
+				continue
+
+			if enemy is not None and enemy and obj.fighter.enemy:
+				targets.append(obj)
+				continue
+			elif enemy is not None and not enemy and obj.fighter.enemy:
+				continue
+
+	return targets
 
 
 ##################################################################################################################################
@@ -883,6 +1024,17 @@ def inventory_menu(header):
 
 	if index is None or len(inventory) == 0: return None
 	return inventory[index].item
+
+def spell_menu(header):
+	if len(spells) == 0:
+		options = ['You don\'t know any spells.']
+	else:
+		options = [spell['name'] for spell in spells]
+
+	index = menu(header, options, SPELL_WIDTH)
+
+	if index is None or len(spells) == 0: return None
+	return spells[index]
 
 ##################################################################################################################################
 #	UI Utilities																												 #
@@ -961,10 +1113,16 @@ def render_all():
 
 
 	if game_state == STATE_TARGET and target_coords[0] != None:
+
+		if temp_spell != None:
+			spell = temp_spell['spell']
+		else:
+			spell = current_spell
+
 		libtcod.console_set_default_background(spell_con, COLOR_TRANSPARENT)
 		libtcod.console_clear(spell_con)
 
-		in_range = player.distance_to_point(target_coords[0],target_coords[1]) <= target_range
+		in_range = player.distance_to_point(target_coords[0],target_coords[1]) <= spell['range']
 		if in_range:
 			spell_fg = COLOR_SPELL_TARGET_FG
 			spell_bg = COLOR_SPELL_TARGET_BG
@@ -999,6 +1157,9 @@ def render_all():
 	render_bar(1, 1, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp, libtcod.light_red, libtcod.darker_red)
 	render_bar(1, 3, BAR_WIDTH, 'MA', player.fighter.mana, player.fighter.max_mana, libtcod.light_blue, libtcod.darker_blue)
 
+	libtcod.console_set_default_foreground(panel, libtcod.white)
+	libtcod.console_print_ex(panel, 1, 5, libtcod.BKGND_NONE, libtcod.LEFT,'Spell: %s' % (current_spell['name']))
+
 	libtcod.console_set_default_foreground(panel, libtcod.light_gray)
 	libtcod.console_print_ex(panel, 1, 0, libtcod.BKGND_NONE, libtcod.LEFT, get_names_under_mouse())
 
@@ -1027,14 +1188,14 @@ def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
 ##################################################################################################################################
 ##################################################################################################################################
 ##																																##
-##										   KK     KK  EEEEEEEE  YY      YY   SSSSSSS 											##
+##										   KK     KK  EEEEEEEE  YY      YY   SSSSSSSS 											##
 ##										   KK    KK   EE         YY    YY   SS       											##
 ##										   KK   KK    EE          YY  YY    SS       											##
 ##										   KKKKK      EEEEEEE      YYYY       SSS    											##
 ##										   KK  KK     EE            YY          SSS  											##
 ##										   KK    KK   EE            YY             SS											##
 ##										   KK     KK  EE            YY             SS											##
-##										   KK     KK  EEEEEEEE      YY       SSSSSSS 											##
+##										   KK     KK  EEEEEEEE      YY      SSSSSSSS 											##
 ##																																##			
 ##################################################################################################################################
 ##################################################################################################################################
@@ -1045,7 +1206,7 @@ def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
 ##################################################################################################################################
 
 def handle_keys():
-	global game_state
+	global game_state, target_coords, current_spell
 
 	if key.vk in KEYS_FULLSCREEN:
 		libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
@@ -1053,33 +1214,137 @@ def handle_keys():
 	elif key.vk in KEYS_EXIT:
 		return ACTION_EXIT
 
-	if game_state == STATE_PLAYING:
-		if key.vk in KEYS_UP:
-			player_move_or_attack(0,-1)
+	if game_state == STATE_TARGET:
+		if key_match(key, KEYS_CANCEL):
+			game_state = STATE_PLAYING
+			return ACTION_NONE
+
+		elif key_match(key, KEYS_CONFIRM):
+			if temp_spell != None:
+				spell = temp_spell['spell']
+			else:
+				spell = current_spell
+
+			success = spell['cast_function'](spell,target_coords[0],target_coords[1])
+
+			if success == RESULT_CANCELLED:
+				return ACTION_NONE
+
+			return ACTION_TURN
+			
+
+		elif key_match(key, KEYS_UP):
+			move_target(0,-1)
+			return ACTION_NONE
 	 
-	 	elif key.vk in KEYS_DOWN:
-			player_move_or_attack(0,1)
+	 	elif key_match(key, KEYS_DOWN):
+			move_target(0,1)
+			return ACTION_NONE
 	 	
-	 	elif key.vk in KEYS_LEFT:
-			player_move_or_attack(-1,0)
+	 	elif key_match(key, KEYS_LEFT):
+			move_target(-1,0)
+			return ACTION_NONE
 	 	
-	 	elif key.vk in KEYS_RIGHT:
-			player_move_or_attack(1,0)
+	 	elif key_match(key, KEYS_RIGHT):
+			move_target(1,0)
+			return ACTION_NONE
+
+		elif key_match(key, KEYS_UPLEFT):
+			move_target(-1,-1)
+			return ACTION_NONE
+	 
+	 	elif key_match(key, KEYS_UPRIGHT):
+			move_target(1,-1)
+			return ACTION_NONE
+	 	
+	 	elif key_match(key,  KEYS_DOWNLEFT):
+			move_target(-1,1)
+			return ACTION_NONE
+	 	
+	 	elif key_match(key, KEYS_DOWNRIGHT):
+			move_target(1,1)
+			return ACTION_NONE
+
+		elif key_match(key, KEYS_WAIT):
+			return ACTION_TURN
 
 		else:
-			key_char = chr(key.c)
-
-			if key_char in KEYS_PICKUP:
-				for obj in objects:
-					if obj.item and obj.x == player.x and obj.y == player.y:
-						obj.item.pick_up()
-						break
-			elif key_char in KEYS_INVENTORY:
-				item = inventory_menu("Press the key next to an item to use it or any other to cancel.\n")
-				if item is not None:
-					item.use()
-
 			return ACTION_NONE
+
+	if game_state == STATE_PLAYING:
+		if key_match(key, KEYS_UP):
+			player_move_or_attack(0,-1)
+			return ACTION_TURN
+	 
+	 	elif key_match(key, KEYS_DOWN):
+			player_move_or_attack(0,1)
+			return ACTION_TURN
+	 	
+	 	elif key_match(key, KEYS_LEFT):
+			player_move_or_attack(-1,0)
+			return ACTION_TURN
+	 	
+	 	elif key_match(key, KEYS_RIGHT):
+			player_move_or_attack(1,0)
+			return ACTION_TURN
+
+		elif key_match(key, KEYS_UPLEFT):
+			player_move_or_attack(-1,-1)
+			return ACTION_TURN
+	 
+	 	elif key_match(key, KEYS_UPRIGHT):
+			player_move_or_attack(1,-1)
+			return ACTION_TURN
+	 	
+	 	elif key_match(key,  KEYS_DOWNLEFT):
+			player_move_or_attack(-1,1)
+			return ACTION_TURN
+	 	
+	 	elif key_match(key, KEYS_DOWNRIGHT):
+			player_move_or_attack(1,1)
+			return ACTION_TURN
+
+		elif key_match(key, KEYS_WAIT):
+			return ACTION_TURN
+
+		elif key_match(key, KEYS_CAST):
+			target_coords = (player.x,player.y)
+			game_state = STATE_TARGET
+			return ACTION_NONE
+
+		elif key_match(key, KEYS_PICKUP):
+			for obj in objects:
+				if obj.item and obj.x == player.x and obj.y == player.y:
+					obj.item.pick_up()
+					break
+			return ACTION_NONE
+
+		elif key_match(key, KEYS_INVENTORY):
+			item = inventory_menu("Press the key next to an item to use it or any other to cancel.\n")
+			if item is not None:
+				item.use()
+			return ACTION_NONE
+
+		elif key_match(key, KEYS_DROP):
+			item = inventory_menu("Press the key next to an item to drop it or any other to cancel.\n")
+			if item is not None:
+				item.drop()
+			return ACTION_NONE
+
+		elif key_match(key, KEYS_SPELL):
+			spell = spell_menu("Press the key next to an spell to select it or any other to cancel.\n")
+			if spell is not None:
+				current_spell = spell
+			return ACTION_NONE
+
+		else:
+			return ACTION_NONE
+
+def key_match(key,keys):
+	if key.vk == libtcod.KEY_CHAR:
+		return chr(key.c) in keys
+	else:
+		return key.vk in keys
 
 
 
@@ -1163,6 +1428,10 @@ spells = {
 		'range': 5,
 		'min': 14,
 		'max': 25,
+		'radius': 1,
+		'friendly': False,
+		'self': False,
+		'enemy': True,
 		'cast_function': cast_lightning
 	},
 	'confuse': {
@@ -1170,14 +1439,34 @@ spells = {
 		'range': 8,
 		'min_duration': 5,
 		'max_duration': 15,
+		'radius': 1,
+		'friendly': False,
+		'self': False,
+		'enemy': True,
 		'cast_function': cast_confuse
 	},
 	'heal': {
 		'name': 'Heal',
 		'min': 10,
 		'max': 25,
+		'range': 5,
+		'radius': 1,
+		'friendly': True,
+		'self': True,
+		'enemy': True,
 		'cast_function': cast_heal
-	}
+	},
+	'fireball': {
+		'name': 'Fireball',
+		'range': 6,
+		'min': 7,
+		'max': 12,
+		'radius': 2,
+		'friendly': False,
+		'self': False,
+		'enemy': True,
+		'cast_function': cast_fireball
+	},
 }
 
 ##################################################################################################################################
@@ -1252,10 +1541,16 @@ player = Object(
 				mana=player_config['mana'],
 				defense=player_config['defense'],
 				power=(player_config['power_min'],player_config['power_max']), 
-				death_function=player_death
+				death_function=player_death,
+				friendly=True,
+				enemy=False
 				)
 			)
 
+current_spell = spells['lightning']
+temp_spell = None
+
+spells = [spells['lightning'],spells['fireball'],spells['confuse'],spells['heal']]
 
 game_state = STATE_PLAYING
 player_action = ACTION_NONE
@@ -1302,7 +1597,7 @@ while not libtcod.console_is_window_closed():
 	
 	player_action = handle_keys()
 
-	if game_state == STATE_PLAYING and player_action != ACTION_NONE:
+	if player_action == ACTION_TURN:
 		for obj in objects:
 			if obj.ai:
 				obj.ai.take_turn()
