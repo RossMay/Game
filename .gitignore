@@ -15,6 +15,7 @@ local.properties
 .classpath
 .settings/
 .loadpath
+*.sublime-project
 
 # External tool builders
 .externalToolBuilders/
