@@ -1067,7 +1067,7 @@ def main_menu():
 				continue
 			play_game()
 
-		elif choice == 4:
+		elif choice == 3:
 			save_game()
 			break
 
