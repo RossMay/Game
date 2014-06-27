@@ -1045,7 +1045,7 @@ def main_menu():
 		libtcod.console_set_default_foreground(0, libtcod.light_yellow)
 		libtcod.console_print_ex(0, int(SCREEN_WIDTH/2), int(SCREEN_HEIGHT/2)-4, libtcod.BKGND_NONE, libtcod.CENTER, 'FUTURE TITLE HERE')
 
-		choice = menu('', ['New game', 'Continue', 'Quit'], 24)
+		choice = menu('', ['New Game', 'Continue', 'Load', 'Quit'], 24)
 
 		if key.vk in KEYS_FULLSCREEN:
 			libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
@@ -1055,6 +1055,11 @@ def main_menu():
 			play_game()
 
 		elif choice == 1:
+			if not game_started:
+				new_game()
+			play_game()
+
+		elif choice == 2:
 			try:
 				load_game()
 			except:
@@ -1062,7 +1067,7 @@ def main_menu():
 				continue
 			play_game()
 
-		elif choice == 2:
+		elif choice == 4:
 			save_game()
 			break
 
@@ -1603,7 +1608,7 @@ def save_game():
 	savefile.close()
 
 def load_game():
-	global level_map, objects, spell_list, inventory, game_messages, game_state, current_spell, temp_spell, target_coords, player
+	global level_map, objects, spell_list, inventory, game_messages, game_state, current_spell, temp_spell, target_coords, player, game_started
 
 	savefile = shelve.open('savegame', 'r')
 
@@ -1622,8 +1627,10 @@ def load_game():
 
 	init_fov()
 
+	game_started = True
+
 def new_game():
-	global player, game_state, inventory, spell_list, current_spell, temp_spell, game_messages
+	global player, game_state, inventory, spell_list, current_spell, temp_spell, game_messages, game_started
 
 	player = Object(
 				x=0, 
@@ -1657,6 +1664,8 @@ def new_game():
 	target_coords = (None,None)
 
 	game_messages = []
+
+	game_started = True
 
 
 	#message('Kill all of the monsters!', libtcod.red)
@@ -1699,6 +1708,8 @@ libtcod.console_set_key_color(spell_con,COLOR_TRANSPARENT)
 
 mouse = libtcod.Mouse()
 key = libtcod.Key()
+
+game_started = False
 
 
 main_menu()
