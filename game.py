@@ -1,7 +1,7 @@
 from __future__ import division
 import libtcodpy as libtcod
 from libtcodpy import random_get_int as rand
-import math, textwrap, time, sys
+import math, textwrap, time, sys, shelve
 
 
 ##################################################################################################################################
@@ -804,7 +804,9 @@ class Rect:
 ##################################################################################################################################
 
 def make_map():
-	global level_map, player, target_coords
+	global level_map, player, target_coords, objects
+
+	objects = [player]
 
 	level_map = [[ Tile(True) for y in range(MAP_HEIGHT)] for x in range(MAP_WIDTH)]
 
@@ -834,8 +836,27 @@ def create_hall(room1, room2):
 		level_map[x][y+1].block_sight = False
 		x,y = libtcod.line_step()
 
+##################################################################################################################################
+#	Field of View Initialization																								 #
+##################################################################################################################################
+
+def init_fov():
+	global fov_map, fov_recompute
+
+	fov_recompute = True
+
+	libtcod.console_clear(con)
+
+	fov_map = libtcod.map_new(MAP_WIDTH, MAP_HEIGHT)
+	for y in range(MAP_HEIGHT):
+		for x in range(MAP_WIDTH):
+			if DEBUG:
+				libtcod.map_set_properties(fov_map, x, y, True, True)
+			else:
+				libtcod.map_set_properties(fov_map, x, y, not level_map[x][y].block_sight, not level_map[x][y].blocked)
+
 def place_objects(room):
-	global spells, items, objects
+	global items, objects
 	num_monsters = rand(0, 0, MAX_ROOM_MONSTERS)
 
 	for i in range(num_monsters):
@@ -988,7 +1009,7 @@ def menu(header, options, width):
 	if len(options) > 26: 
 		raise ValueError('Cannot have a menu with more than 26 items')
 
-	header_height = libtcod.console_get_height_rect(con, 0, 0, width, SCREEN_HEIGHT, header)
+	header_height = libtcod.console_get_height_rect(con, 0, 0, width, SCREEN_HEIGHT, header) if len(header) else 0
 	height = len(options) + header_height
 
 	window = libtcod.console_new(width, height)
@@ -1014,6 +1035,37 @@ def menu(header, options, width):
 	if index >= 0 and index < len(options): return index
 	return None
 
+def main_menu():
+	img = libtcod.image_load('bg.png')
+
+	while not libtcod.console_is_window_closed():
+
+		libtcod.image_blit_2x(img, 0, 0, 0)
+
+		libtcod.console_set_default_foreground(0, libtcod.light_yellow)
+		libtcod.console_print_ex(0, int(SCREEN_WIDTH/2), int(SCREEN_HEIGHT/2)-4, libtcod.BKGND_NONE, libtcod.CENTER, 'FUTURE TITLE HERE')
+
+		choice = menu('', ['New game', 'Continue', 'Quit'], 24)
+
+		if key.vk in KEYS_FULLSCREEN:
+			libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
+
+		if choice == 0:
+			new_game()
+			play_game()
+
+		elif choice == 1:
+			try:
+				load_game()
+			except:
+				msgbox('\nError loading game.\n', 24)
+				continue
+			play_game()
+
+		elif choice == 2:
+			save_game()
+			break
+
 def inventory_menu(header):
 	if len(inventory) == 0:
 		options = ['Inventory is empty.']
@@ -1026,19 +1078,22 @@ def inventory_menu(header):
 	return inventory[index].item
 
 def spell_menu(header):
-	if len(spells) == 0:
+	if len(spell_list) == 0:
 		options = ['You don\'t know any spells.']
 	else:
-		options = [spell['name'] for spell in spells]
+		options = [spell['name'] for spell in spell_list]
 
 	index = menu(header, options, SPELL_WIDTH)
 
-	if index is None or len(spells) == 0: return None
-	return spells[index]
+	if index is None or len(spell_list) == 0: return None
+	return spell_list[index]
 
 ##################################################################################################################################
 #	UI Utilities																												 #
 ##################################################################################################################################
+
+def message_box(text, width=50):
+	menu(text, [], width)
 
 def message(new_msg, color = libtcod.white):
 	new_msg_lines = textwrap.wrap(new_msg, MSG_WIDTH)
@@ -1517,8 +1572,122 @@ player_config = {
 }
 
 ##################################################################################################################################
-#	Setup																														 #
 ##################################################################################################################################
+##																																##
+##									   SSSSSSSS  EEEEEEEE  TTTTTTTT  UU      UU  PPPPPPPP  										##
+##									  SS         EE           TT     UU      UU  PP     PP 										##
+##									  SS         EE           TT     UU      UU  PP      PP										##
+##									    SSS      EEEEEEE      TT     UU	     UU  PP     PP 										##
+##									      SSS    EE           TT     UU      UU  PPPPPPP   										##
+##									         SS  EE           TT     UU      UU  PP        										##
+##									         SS  EE           TT     UU      UU  PP        										##
+##									  SSSSSSSS   EEEEEEEE     TT       UUUUUU    PP        										##
+##																																##
+##################################################################################################################################
+##################################################################################################################################
+
+def save_game():
+	savefile = shelve.open('savegame', 'n')
+
+	savefile['map']				= level_map
+	savefile['objects'] 		= objects
+	savefile['spell_list'] 		= spell_list
+	savefile['inventory'] 		= inventory
+	savefile['game_messages'] 	= game_messages
+	savefile['game_state'] 		= game_state
+	savefile['current_spell'] 	= current_spell
+	savefile['temp_spell'] 		= temp_spell
+	savefile['target_coords'] 	= target_coords
+	savefile['player_index'] 	= objects.index(player)
+
+	savefile.close()
+
+def load_game():
+	global level_map, objects, spell_list, inventory, game_messages, game_state, current_spell, temp_spell, target_coords, player
+
+	savefile = shelve.open('savegame', 'r')
+
+	level_map 		= savefile['map']
+	objects 		= savefile['objects']
+	spell_list 		= savefile['spell_list']
+	inventory 		= savefile['inventory']
+	game_messages 	= savefile['game_messages']
+	game_state		= savefile['game_state']
+	current_spell	= savefile['current_spell']
+	temp_spell		= savefile['temp_spell']
+	target_coords	= savefile['target_coords']
+	player 			= objects[savefile['player_index']]
+
+	savefile.close()	
+
+	init_fov()
+
+def new_game():
+	global player, game_state, inventory, spell_list, current_spell, temp_spell, game_messages
+
+	player = Object(
+				x=0, 
+				y=0, 
+				char=player_config['char'], 
+				name=player_config['name'], 
+				color=player_config['color'], 
+				blocks=True, 
+				fighter=Fighter(
+					hp=player_config['hp'],
+					mana=player_config['mana'],
+					defense=player_config['defense'],
+					power=(player_config['power_min'],player_config['power_max']), 
+					death_function=player_death,
+					friendly=True,
+					enemy=False
+					)
+				)
+
+	make_map()
+
+	init_fov()
+
+	game_state = STATE_PLAYING	
+
+	inventory = []
+	spell_list = [spells['lightning'],spells['fireball'],spells['confuse'],spells['heal']]
+	current_spell = spells['lightning']
+	temp_spell = None
+
+	target_coords = (None,None)
+
+	game_messages = []
+
+
+	#message('Kill all of the monsters!', libtcod.red)
+
+def play_game():
+	global key, mouse, player_action
+
+	player_action = ACTION_NONE
+
+	while not libtcod.console_is_window_closed():
+
+		libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS|libtcod.EVENT_MOUSE,key,mouse)
+
+		render_all()
+
+	 	libtcod.console_flush()
+	 	
+	 	for obj in objects:
+	 		obj.clear()
+		
+		player_action = handle_keys()
+
+		if player_action == ACTION_TURN:
+			for obj in objects:
+				if obj.ai:
+					obj.ai.take_turn()
+
+		if player_action == ACTION_EXIT: 
+			break
+
+
 
 libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
 libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'Game', False)
@@ -1528,79 +1697,9 @@ panel = libtcod.console_new(SCREEN_WIDTH, PANEL_HEIGHT)
 spell_con = libtcod.console_new(MAP_WIDTH, MAP_HEIGHT)
 libtcod.console_set_key_color(spell_con,COLOR_TRANSPARENT)
 
-
-player = Object(
-			x=0, 
-			y=0, 
-			char=player_config['char'], 
-			name=player_config['name'], 
-			color=player_config['color'], 
-			blocks=True, 
-			fighter=Fighter(
-				hp=player_config['hp'],
-				mana=player_config['mana'],
-				defense=player_config['defense'],
-				power=(player_config['power_min'],player_config['power_max']), 
-				death_function=player_death,
-				friendly=True,
-				enemy=False
-				)
-			)
-
-current_spell = spells['lightning']
-temp_spell = None
-
-spells = [spells['lightning'],spells['fireball'],spells['confuse'],spells['heal']]
-
-game_state = STATE_PLAYING
-player_action = ACTION_NONE
-
 mouse = libtcod.Mouse()
 key = libtcod.Key()
 
-objects = [player]
-inventory = []
 
-target_coords = (None,None)
-target_range = 5
+main_menu()
 
-game_messages = []
-
-message('Kill all of the monsters!', libtcod.red)
-
-make_map()
-
-fov_map = libtcod.map_new(MAP_WIDTH, MAP_HEIGHT)
-for y in range(MAP_HEIGHT):
-	for x in range(MAP_WIDTH):
-		if DEBUG:
-			libtcod.map_set_properties(fov_map, x, y, True, True)
-		else:
-			libtcod.map_set_properties(fov_map, x, y, not level_map[x][y].block_sight, not level_map[x][y].blocked)
-
-fov_recompute = True
-
-##################################################################################################################################
-#	Main Loop																													 #
-##################################################################################################################################
-
-while not libtcod.console_is_window_closed():
-
-	libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS|libtcod.EVENT_MOUSE,key,mouse)
-
-	render_all()
-
- 	libtcod.console_flush()
- 	
- 	for obj in objects:
- 		obj.clear()
-	
-	player_action = handle_keys()
-
-	if player_action == ACTION_TURN:
-		for obj in objects:
-			if obj.ai:
-				obj.ai.take_turn()
-
-	if player_action == ACTION_EXIT: 
-		break
