@@ -41,7 +41,7 @@ SCREEN_HEIGHT 	= 50	# Overall screen height
 
 #	Map Dimensions
 MAP_WIDTH 		= 80	# Width of the playable map
-MAP_HEIGHT 		= 43	# Height of the playable map
+MAP_HEIGHT 		= 41	# Height of the playable map
 
 #	Game States
 STATE_PLAYING	= 0		# Player os currently playing, each action triggers a turn
@@ -65,7 +65,7 @@ INVENTORY_WIDTH = 50							# Width of the inventory menu
 SPELL_WIDTH 	= 50							# Width of the spell menu
 
 BAR_WIDTH 		= 25							# Width of health / mana bars
-PANEL_HEIGHT 	= 7 							# Height of the bottom panel
+PANEL_HEIGHT 	= 9 							# Height of the bottom panel
 PANEL_Y 		= SCREEN_HEIGHT - PANEL_HEIGHT	# Where to start the panel
 
 MSG_X 			= BAR_WIDTH + 2 				# Where to start the message window, right after the bars
@@ -91,20 +91,25 @@ RANDOM_HALLS 		= 10 	# Number of random rooms to connect after map generation
 ##################################################################################################################################
 
 #	Light Radius
-LIGHT_RADIUS = 10 if not DEBUG else 1000	# Light radius!
+LIGHT_RADIUS 		= 10 if not DEBUG else 1000	# Light radius!
+BASE_LEVEL_XP		= 100 	# Base exp needed to level
+LEVEL_XP_FACTOR 	= 100 	# This * Level additional
+MONSTER_LEVEL_RANGE	= 2 	# +- this value on monsters vs dungeon level
 
 ##################################################################################################################################
 #	Characters																													 #
 ##################################################################################################################################
 
-CHAR_PLAYER 	= '@'	# Player
-CHAR_NPC    	= 'N'	# NPC
-CHAR_WALL   	= '#'	# Wall
-CHAR_GROUND 	= '.'	# Basic ground
-CHAR_OTHER  	= ' '	# Anything else
-CHAR_CORPSE 	= '%'	# Corpse
-CHAR_SPELL 		= ' '	# Default spell character
-CHAR_SPELL_PATH = ' '	# Default spell path character
+CHAR_PLAYER 		= '@'	# Player
+CHAR_NPC    		= 'N'	# NPC
+CHAR_WALL   		= '#'	# Wall
+CHAR_GROUND 		= '.'	# Basic ground
+CHAR_OTHER  		= ' '	# Anything else
+CHAR_CORPSE 		= '%'	# Corpse
+CHAR_SPELL 			= ' '	# Default spell character
+CHAR_SPELL_PATH 	= ' '	# Default spell path character
+CHAR_STAIRS_DOWN	= '<'	# Stairs going down a level
+CHAR_STAIRS_UP		= '>'	# Stairs going up a level
 
 
 ##################################################################################################################################
@@ -121,6 +126,7 @@ KEYS_UPRIGHT 	= [libtcod.KEY_KP9]
 KEYS_DOWNLEFT 	= [libtcod.KEY_KP1]
 KEYS_DOWNRIGHT 	= [libtcod.KEY_KP3]
 KEYS_WAIT		= [libtcod.KEY_KP5, 'w']
+KEYS_STAIRS		= ['<','>']
 
 #	General
 KEYS_CONFIRM	= [libtcod.KEY_KPENTER, 'c']
@@ -173,6 +179,9 @@ COLOR_SPELL_TARGET_LINE_BAD_FG 	= COLOR_TRANSPARENT		# Foreground for the line t
 COLOR_SPELL_TARGET_BAD_BG 		= libtcod.red 			# Background for the cell of an invalid target
 COLOR_SPELL_TARGET_BAD_FG 		= COLOR_TRANSPARENT		# Foreground for the cell of an invalid target
 
+COLOR_DARK_STAIRS_FG	= libtcod.gray 					# Foreground for dark stairs
+COLOR_LIGHT_STAIRS_FG	= libtcod.white					# Foreground for dark stairs
+
 
 ##################################################################################################################################
 ##################################################################################################################################
@@ -195,7 +204,7 @@ COLOR_SPELL_TARGET_BAD_FG 		= COLOR_TRANSPARENT		# Foreground for the cell of an
 ##################################################################################################################################
 
 class Object:
-	def __init__(self, x, y, char=' ', name='Unknown Object', color=libtcod.white, blocks=False, fighter=None, ai=None, item=None):
+	def __init__(self, x, y, char=' ', name='Unknown Object', color=libtcod.white, blocks=False, fighter=None, ai=None, item=None, always_visible=False):
 		self.x = x
 		self.y = y
 		self.char = char
@@ -205,10 +214,14 @@ class Object:
 		self.fighter = fighter
 		self.ai = ai
 		self.item = item
+		self.always_visible = always_visible
 
 		if self.fighter: self.fighter.owner = self	
 		if self.ai: self.ai.owner = self
 		if self.item: self.item.owner = self
+
+	def get_color(self, infov=True):
+		return self.color
 
 	def move(self, dx, dy):
 		if not is_blocked(self.x + dx, self.y + dy):
@@ -245,8 +258,8 @@ class Object:
 		return self.distance_to(obj) >= d
 
 	def draw(self):
-		if libtcod.map_is_in_fov(fov_map, self.x, self.y):
-			libtcod.console_set_default_foreground(con, self.color)
+		if libtcod.map_is_in_fov(fov_map, self.x, self.y) or (self.always_visible and level_map[self.x][self.y].explored):
+			libtcod.console_set_default_foreground(con, self.get_color(infov = libtcod.map_is_in_fov(fov_map, self.x, self.y)))
 			libtcod.console_put_char(con, self.x, self.y, self.char, libtcod.BKGND_NONE)
 
 	def clear(self):
@@ -280,21 +293,41 @@ class Object:
 ##################################################################################################################################
 
 class Fighter:
-	def __init__(self, hp, mana, defense, power, death_function=None, friendly=False, enemy=True):
-		self.death_function = death_function
-		self.max_hp = hp
-		self.hp = hp
-		self.max_mana = mana
-		self.mana = mana
-		self.defense = defense
-		self.friendly = friendly
-		self.enemy = enemy
+	def __init__(self, hp, mana, defense, power, xp=0, death_function=None, friendly=False, enemy=True, level=1, 
+					hp_factor=0.20, mana_factor=0.20, defense_factor=0.25, power_min_factor = 0.25, power_max_factor = 0.25, xp_factor = 0.25):
 
 		if not len(power):
 			power = (power,power)
 
-		self.power_min = power[0]
-		self.power_max = power[1]
+		self.level 		= level
+		self.max_hp 	= int(hp + level * hp * hp_factor)
+		self.hp 		= self.max_hp
+		self.max_mana 	= int(mana + level * mana * mana_factor)
+		self.mana 		= self.max_mana
+		self.defense 	= int(defense + level * defense * defense_factor)
+		self.power_min 	= int(power[0] + level * power[0] * power_min_factor)
+		self.power_max 	= int(power[1] + level * power[1] * power_max_factor)
+		self.xp 		= int(xp + level * xp * xp_factor)
+
+		self.base_hp 		= hp
+		self.base_mana		= mana
+		self.base_defense	= defense
+		self.base_power_min = power[0]
+		self.base_power_max	= power[1]
+
+		self.hp_factor 			= hp_factor
+		self.mana_factor 		= mana_factor
+		self.defense_factor		= defense_factor
+		self.power_min_factor	= power_min_factor
+		self.power_max_factor	= power_max_factor
+		self.xp_factor 			= xp_factor
+
+
+		self.friendly 		= friendly
+		self.enemy 			= enemy
+		self.death_function = death_function
+
+
 
 	def take_damage(self, damage):
 		if damage > 0:
@@ -305,6 +338,8 @@ class Fighter:
 			function = self.death_function
 			if function is not None:
 				function(self.owner)
+			if self.owner != player:
+				player.fighter.grant_xp(self.xp)
 
 	def attack(self, target):
 		damage = rand(0,self.power_min,self.power_max) - target.fighter.defense
@@ -319,6 +354,29 @@ class Fighter:
 		self.hp += amount
 		if self.hp > self.max_hp:
 			self.hp = self.max_hp
+
+	def grant_xp(self,xp):
+		player.fighter.xp += xp
+
+		if self.xp >= next_level_xp():
+			self.xp -= next_level_xp()
+			self.level_up()
+
+	def level_up(self):
+
+		message("You grow much stronger", libtcod.violet)
+
+		self.level += 1
+		self.max_hp += int(self.level * self.base_hp * self.hp_factor)
+		self.hp = self.max_hp
+
+		self.max_mana += int(self.level * self.base_mana * self.mana_factor)
+		self.mana = self.max_mana
+
+		self.defense += int(self.level * self.base_defense * self.defense_factor)
+		self.power_min += int(self.level * self.base_power_min * self.power_min_factor)
+		self.power_max += int(self.level * self.base_power_max * self.power_max_factor)
+
 
 def spawn_monster(x, y, monster):
 	global objects
@@ -335,7 +393,15 @@ def spawn_monster(x, y, monster):
 								power=(monster['power_min'],monster['power_max']), 
 								death_function=monster['death_function'],
 								friendly=False,
-								enemy=True
+								enemy=True,
+								xp=monster['xp'],
+								hp_factor=monster['hp_factor'],
+								mana_factor=monster['mana_factor'],
+								defense_factor=monster['defense_factor'],
+								power_min_factor=monster['power_min_factor'],
+								power_max_factor=monster['power_max_factor'],
+								xp_factor=monster['xp_factor'],
+								level=max(1,dungeon_level+rand(0,-MONSTER_LEVEL_RANGE,MONSTER_LEVEL_RANGE))
 							), 
 					ai=monster['ai']()
 				)
@@ -458,7 +524,8 @@ def spawn_item(x, y, item):
 						consumable=item.get('consumable',False), 
 						use_function=item.get('use_function',None), 
 						value=item.get('value',None)
-						)
+						),
+					always_visible=True
 					)
 
 	objects.append(new_item)
@@ -796,6 +863,11 @@ class Rect:
 		center_y = (self.y1 + self.y2) // 2
 		return (center_x, center_y)
 
+	def random(self):
+		x = rand(0,self.x1+1,self.x2-1)
+		y = rand(0,self.y1+1,self.y2-1)
+		return (x,y)
+
 	def intersect(self, other):
 		return (self.x1 <= other.x2 and self.x2 >= other.x1 and self.y1 <= other.y2 and self.y2 >= other.y1)
 
@@ -804,7 +876,7 @@ class Rect:
 ##################################################################################################################################
 
 def make_map():
-	global level_map, player, target_coords, objects
+	global level_map, player, target_coords, objects, stairs_down
 
 	objects = [player]
 
@@ -819,8 +891,20 @@ def make_map():
 	for i in range(RANDOM_HALLS):
 		create_hall(root_node.get_random_room(),root_node.get_random_room())
 
-	player.x, player.y = root_node.get_random_room().center()
+	starting = root_node.get_random_room()
+	player.x, player.y = starting.center()
+
 	target_coords = (player.x+1,player.y+2)
+
+	stairroom = root_node.get_random_room()
+	while stairroom == starting:
+		stairroom = root_node.get_random_room()
+
+	x,y = stairroom.random()
+
+	stairs_down = Object(x, y, CHAR_STAIRS_DOWN, 'Stairs Down', COLOR_LIGHT_STAIRS_FG)
+	objects.append(stairs_down)
+	stairs_down.send_to_back()
 
 def create_hall(room1, room2):
 
@@ -914,6 +998,9 @@ def place_objects(room):
 ##################################################################################################################################
 ##################################################################################################################################
 
+
+def next_level_xp():
+	return BASE_LEVEL_XP + player.fighter.level * LEVEL_XP_FACTOR
 
 def is_blocked( x, y):
 		if level_map[x][y].blocked:
@@ -1219,6 +1306,7 @@ def render_all():
 
 	libtcod.console_set_default_foreground(panel, libtcod.white)
 	libtcod.console_print_ex(panel, 1, 5, libtcod.BKGND_NONE, libtcod.LEFT,'Spell: %s' % (current_spell['name']))
+	libtcod.console_print_ex(panel, 1, 7, libtcod.BKGND_NONE, libtcod.LEFT,'Xp: %s/%s Floor: %s' % (player.fighter.xp, next_level_xp(), dungeon_level))
 
 	libtcod.console_set_default_foreground(panel, libtcod.light_gray)
 	libtcod.console_print_ex(panel, 1, 0, libtcod.BKGND_NONE, libtcod.LEFT, get_names_under_mouse())
@@ -1397,6 +1485,11 @@ def handle_keys():
 				current_spell = spell
 			return ACTION_NONE
 
+		elif key_match(key, KEYS_STAIRS):
+			if stairs_down.x == player.x and stairs_down.y == player.y:
+				next_level()
+			return ACTION_NONE
+
 		else:
 			return ACTION_NONE
 
@@ -1437,6 +1530,13 @@ monsters = {
 		'defense': 1,
 		'power_min': 2,
 		'power_max': 4,
+		'xp': 20,
+		'hp_factor': 0.15,
+		'mana_factor': 0.15,
+		'defense_factor': 0.15,
+		'power_min_factor': 0.15,
+		'power_max_factor': 0.20,
+		'xp_factor': 0.25,
 		'death_function': monster_death,
 		'ai': BasicMonster
 	},
@@ -1449,6 +1549,13 @@ monsters = {
 		'defense': 1,
 		'power_min': 3,
 		'power_max': 5,
+		'xp': 30,
+		'hp_factor': 0.25,
+		'mana_factor': 0.25,
+		'defense_factor': 0.30,
+		'power_min_factor': 0.25,
+		'power_max_factor': 0.35,
+		'xp_factor': 0.5,
 		'death_function': monster_death,
 		'ai': BasicMonster
 	},
@@ -1461,6 +1568,13 @@ monsters = {
 		'defense': 0,
 		'power_min': 2,
 		'power_max': 4,
+		'xp': 15,
+		'hp_factor': 0.20,
+		'mana_factor': 0.20,
+		'defense_factor': 0.25,
+		'power_min_factor': 0.20,
+		'power_max_factor': 0.30,
+		'xp_factor': 0.40,
 		'death_function': monster_death,
 		'ai': BasicMonster
 	},
@@ -1473,6 +1587,13 @@ monsters = {
 		'defense': 0,
 		'power_min': 1,
 		'power_max': 3,
+		'xp': 10,
+		'hp_factor': 0.10,
+		'mana_factor': 0.10,
+		'defense_factor': 0.10,
+		'power_min_factor': 0.10,
+		'power_max_factor': 0.10,
+		'xp_factor': 0.15,
 		'death_function': monster_death,
 		'ai': BasicMonster
 	}	
@@ -1573,7 +1694,12 @@ player_config = {
 	'mana': 15,
 	'defense': 2,
 	'power_min': 4,
-	'power_max': 7
+	'power_max': 7,
+	'hp_factor': 0.10,
+	'mana_factor': 0.10,
+	'defense_factor': 0.10,
+	'power_min_factor': 0.10,
+	'power_max_factor': 0.15,
 }
 
 ##################################################################################################################################
@@ -1603,12 +1729,14 @@ def save_game():
 	savefile['current_spell'] 	= current_spell
 	savefile['temp_spell'] 		= temp_spell
 	savefile['target_coords'] 	= target_coords
+	savefile['dungeon_level'] 	= dungeon_level
 	savefile['player_index'] 	= objects.index(player)
+	savefile['down_index'] 		= objects.index(stairs_down)
 
 	savefile.close()
 
 def load_game():
-	global level_map, objects, spell_list, inventory, game_messages, game_state, current_spell, temp_spell, target_coords, player, game_started
+	global level_map, objects, spell_list, inventory, game_messages, game_state, current_spell, temp_spell, target_coords, player, game_started, stairs_down, dungeon_level
 
 	savefile = shelve.open('savegame', 'r')
 
@@ -1621,7 +1749,9 @@ def load_game():
 	current_spell	= savefile['current_spell']
 	temp_spell		= savefile['temp_spell']
 	target_coords	= savefile['target_coords']
+	dungeon_level	= savefile['dungeon_level']
 	player 			= objects[savefile['player_index']]
+	stairs_down 	= objects[savefile['down_index']]
 
 	savefile.close()	
 
@@ -1630,7 +1760,7 @@ def load_game():
 	game_started = True
 
 def new_game():
-	global player, game_state, inventory, spell_list, current_spell, temp_spell, game_messages, game_started
+	global player, game_state, inventory, spell_list, current_spell, temp_spell, game_messages, game_started, dungeon_level
 
 	player = Object(
 				x=0, 
@@ -1646,10 +1776,17 @@ def new_game():
 					power=(player_config['power_min'],player_config['power_max']), 
 					death_function=player_death,
 					friendly=True,
-					enemy=False
+					enemy=False,
+					xp=0,
+					hp_factor=player_config['hp_factor'],
+					mana_factor=player_config['mana_factor'],
+					defense_factor=player_config['defense_factor'],
+					power_min_factor=player_config['power_min_factor'],
+					power_max_factor=player_config['power_max_factor']					
 					)
 				)
 
+	dungeon_level = 1
 	make_map()
 
 	init_fov()
@@ -1668,7 +1805,19 @@ def new_game():
 	game_started = True
 
 
+
 	#message('Kill all of the monsters!', libtcod.red)
+
+def next_level():
+
+	global player, dungeon_level
+	message("You take the stairs down to the next level.", libtcod.violet)
+
+	player.fighter.heal(int(player.fighter.max_hp /2))
+
+	dungeon_level += 1
+	make_map()
+	init_fov()
 
 def play_game():
 	global key, mouse, player_action
