@@ -451,7 +451,7 @@ class ConfusedMonster:
 			self.duration -= 1
 		else:
 			self.owner.ai = self.old_ai
-			message('The %s is no longer confused.', libtcod.red)
+			message('The %s is no longer confused.' % self.owner.name, libtcod.red)
 
 
 ##################################################################################################################################
