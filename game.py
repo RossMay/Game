@@ -1384,8 +1384,8 @@ def render_all():
 	libtcod.console_set_default_foreground(panel, libtcod.white)
 	# Current Spell
 	libtcod.console_print_ex(panel, 2, 8, libtcod.BKGND_NONE, libtcod.LEFT,'Spell: %s' % (current_spell['name']))
-	# Currentl Floor
-	libtcod.console_print_ex(panel, 2, 10, libtcod.BKGND_NONE, libtcod.LEFT,'Floor: %s' % (dungeon_level))
+	# Current Floor and level
+	libtcod.console_print_ex(panel, 2, 10, libtcod.BKGND_NONE, libtcod.LEFT,'Level: %s Floor: %s' % (player.fighter.level,dungeon_level))
 
 	# Print the player's name above the bar section
 	libtcod.console_print_ex(panel, 2, 0, libtcod.BKGND_NONE, libtcod.LEFT,'%s' % (player.name))
