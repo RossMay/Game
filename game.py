@@ -41,7 +41,7 @@ SCREEN_HEIGHT 	= 63	# Overall screen height
 
 #	Map Dimensions
 MAP_WIDTH 		= 85	# Width of the playable map
-MAP_HEIGHT 		= 50	# Height of the playable map
+MAP_HEIGHT 		= 49	# Height of the playable map
 
 #	Game States
 STATE_PLAYING	= 0		# Player os currently playing, each action triggers a turn
@@ -67,12 +67,12 @@ SAVE_WIDTH		= 50							# Width of the save menu
 EXIT_MENU_WIDTH	= 30 							# Width of thr save/exit menu in game
 
 BAR_WIDTH 		= 25							# Width of health / mana bars
-PANEL_HEIGHT 	= 13 							# Height of the bottom panel
+PANEL_HEIGHT 	= 14 							# Height of the bottom panel
 PANEL_Y 		= SCREEN_HEIGHT - PANEL_HEIGHT	# Where to start the panel
 
 MSG_X 			= BAR_WIDTH + 5 				# Where to start the message window, leave one space on each side plus a line
 MSG_WIDTH 		= SCREEN_WIDTH - BAR_WIDTH - 2 	# Where to end the message window, 2 from the edge of the screen
-MSG_HEIGHT 		= PANEL_HEIGHT - 4 				# Height of the message window
+MSG_HEIGHT 		= PANEL_HEIGHT - 5 				# Height of the message window
 
 ##################################################################################################################################
 #	Generation																													 #
@@ -241,6 +241,10 @@ class Object:
 		if self.fighter: self.fighter.owner = self	
 		if self.ai: self.ai.owner = self
 		if self.item: self.item.owner = self
+
+	@property
+	def display(self):
+		return self.name if not self.fighter else "%s L%s" % (self.name, self.fighter.level)
 
 	def get_color(self, infov=True):
 		return self.color
@@ -1321,11 +1325,11 @@ def get_names_under_mouse():
 
 	(x, y) = mouse.cx, mouse.cy
 	
-	names = [obj.name for obj in objects if obj.x == x and obj.y == y and libtcod.map_is_in_fov(fov_map,obj.x, obj.y)]
+	names = [obj.display for obj in objects if obj.x == x and obj.y == y and libtcod.map_is_in_fov(fov_map,obj.x, obj.y)]
 
 	names = ','.join(names)
 
-	return names.capitalize()
+	return names
 
 
 
@@ -1421,24 +1425,24 @@ def render_all():
 
 	# Horizontal Lines
 	for i in range(1,SCREEN_WIDTH):
-		libtcod.console_put_char_ex(panel, i, 0, CHAR_BAR_HORIZONTAL, libtcod.white, libtcod.black)
+		libtcod.console_put_char_ex(panel, i, 1, CHAR_BAR_HORIZONTAL, libtcod.white, libtcod.black)
 		libtcod.console_put_char_ex(panel, i, PANEL_HEIGHT-1, CHAR_BAR_HORIZONTAL, libtcod.white, libtcod.black)
 
 	# Vertical Lines
-	for i in range(1,PANEL_HEIGHT-1):
+	for i in range(2,PANEL_HEIGHT-1):
 		libtcod.console_put_char_ex(panel, 0, i, CHAR_BAR_VERTICAL, libtcod.white, libtcod.black)
 		libtcod.console_put_char_ex(panel, SCREEN_WIDTH-1, i, CHAR_BAR_VERTICAL, libtcod.white, libtcod.black)
 		libtcod.console_put_char_ex(panel, BAR_WIDTH + 3, i, CHAR_BAR_VERTICAL, libtcod.white, libtcod.black)
 
 	# Draw the middle connector on the top
-	libtcod.console_put_char_ex(panel, BAR_WIDTH + 3, 0, CHAR_BAR_MID_DOWN, libtcod.white, libtcod.black)
+	libtcod.console_put_char_ex(panel, BAR_WIDTH + 3, 1, CHAR_BAR_MID_DOWN, libtcod.white, libtcod.black)
 	# Draw the middle connector on the bottom
 	libtcod.console_put_char_ex(panel, BAR_WIDTH + 3, PANEL_HEIGHT - 1, CHAR_BAR_MID_UP, libtcod.white, libtcod.black)
 
 	# Top Left Corner
-	libtcod.console_put_char_ex(panel, 0, 0, CHAR_BAR_TL, libtcod.white, libtcod.black)
+	libtcod.console_put_char_ex(panel, 0, 1, CHAR_BAR_TL, libtcod.white, libtcod.black)
 	# Top Right Corner
-	libtcod.console_put_char_ex(panel, SCREEN_WIDTH - 1, 0, CHAR_BAR_TR, libtcod.white, libtcod.black)
+	libtcod.console_put_char_ex(panel, SCREEN_WIDTH - 1, 1, CHAR_BAR_TR, libtcod.white, libtcod.black)
 
 	# Bottom Left Corner
 	libtcod.console_put_char_ex(panel, 0, PANEL_HEIGHT - 1, CHAR_BAR_BL, libtcod.white, libtcod.black)
@@ -1446,35 +1450,35 @@ def render_all():
 	libtcod.console_put_char_ex(panel, SCREEN_WIDTH - 1, PANEL_HEIGHT - 1, CHAR_BAR_BR, libtcod.white, libtcod.black)
 
 	# Print the messages
-	y = 2
+	y = 3
 	for (line, color) in game_messages:
 		libtcod.console_set_default_foreground(panel, color)
 		libtcod.console_print_ex(panel, MSG_X, y, libtcod.BKGND_NONE, libtcod.LEFT, line)
 		y += 1
 
 	# Hp Bar
-	render_bar(2, 2, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp, libtcod.light_red, libtcod.darker_red)
+	render_bar(2, 3, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp, libtcod.light_red, libtcod.darker_red)
 	# Mana Bar
-	render_bar(2, 4, BAR_WIDTH, 'MA', player.fighter.mana, player.fighter.max_mana, libtcod.light_blue, libtcod.darker_blue)
+	render_bar(2, 5, BAR_WIDTH, 'MA', player.fighter.mana, player.fighter.max_mana, libtcod.light_blue, libtcod.darker_blue)
 	# XP Bar
-	render_bar(2, 6, BAR_WIDTH, 'XP', player.fighter.xp, next_level_xp(), libtcod.amber, libtcod.darker_amber)
+	render_bar(2, 7, BAR_WIDTH, 'XP', player.fighter.xp, next_level_xp(), libtcod.violet, libtcod.darker_violet)
 
 	# Print info under bars
 	libtcod.console_set_default_foreground(panel, libtcod.white)
 	# Current Spell
-	libtcod.console_print_ex(panel, 2, 8, libtcod.BKGND_NONE, libtcod.LEFT,'Spell: %s' % (current_spell['name']))
+	libtcod.console_print_ex(panel, 2, 9, libtcod.BKGND_NONE, libtcod.LEFT,'Spell: %s' % (current_spell['name']))
 	# Current Floor and level
-	libtcod.console_print_ex(panel, 2, 10, libtcod.BKGND_NONE, libtcod.LEFT,'Level: %s Floor: %s' % (player.fighter.level,dungeon_level))
+	libtcod.console_print_ex(panel, 2, 11, libtcod.BKGND_NONE, libtcod.LEFT,'Level: %s Floor: %s' % (player.fighter.level,dungeon_level))
 
 	# Print the player's name above the bar section
-	libtcod.console_print_ex(panel, 2, 0, libtcod.BKGND_NONE, libtcod.LEFT,'%s' % (player.name))
+	libtcod.console_print_ex(panel, 2, 1, libtcod.BKGND_NONE, libtcod.LEFT,'%s' % (player.name))
 
 	# Print message label
-	libtcod.console_print_ex(panel, BAR_WIDTH + 5, 0, libtcod.BKGND_NONE, libtcod.LEFT,'Messages')
+	libtcod.console_print_ex(panel, BAR_WIDTH + 5, 1, libtcod.BKGND_NONE, libtcod.LEFT,'Messages')
 
 	# Names of things under the mouse
 	libtcod.console_set_default_foreground(panel, libtcod.light_gray)
-	libtcod.console_print_ex(panel, 2, 1, libtcod.BKGND_NONE, libtcod.LEFT, get_names_under_mouse())
+	libtcod.console_print_ex(panel, 2, 0, libtcod.BKGND_NONE, libtcod.LEFT, get_names_under_mouse())
 
 	libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
 
