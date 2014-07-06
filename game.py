@@ -110,26 +110,27 @@ CHAR_SPELL_PATH 	= ' '	# Default spell path character
 CHAR_STAIRS_DOWN	= '<'	# Stairs going down a level
 CHAR_STAIRS_UP		= '>'	# Stairs going up a level
 
-CHAR_BAR_VERTICAL   = 179	# Vertical menu bar
-CHAR_BAR_HORIZONTAL = 196	# Horizontal menu bar
-CHAR_BAR_MID_DOWN	= 194	# Middle down
-CHAR_BAR_MID_UP		= 193	# Middle up
-CHAR_BAR_TL 		= 218	# Top Left
-CHAR_BAR_BL 		= 192 	# Top LEft
-CHAR_BAR_TR 		= 191 	# Top Right
-CHAR_BAR_BR 		= 217 	# Bottom Right
+CHAR_BAR_S_VERTICAL 	= 179	# Vertical menu bar
+CHAR_BAR_S_HORIZONTAL	= 196	# Horizontal menu bar
+CHAR_BAR_S_MID_DOWN		= 194	# Middle down
+CHAR_BAR_S_MID_UP		= 193	# Middle up
+CHAR_BAR_S_MID_LEFT		= 195	# Middle left
+CHAR_BAR_S_MID_RIGHT	= 180	# Middle right
+CHAR_BAR_S_TL 			= 218	# Top Left
+CHAR_BAR_S_BL 			= 192 	# Top LEft
+CHAR_BAR_S_TR 			= 191 	# Top Right
+CHAR_BAR_S_BR 			= 217 	# Bottom Right
 
 CHAR_BAR_VERTICAL   = 186	# Vertical menu bar
 CHAR_BAR_HORIZONTAL = 205	# Horizontal menu bar
 CHAR_BAR_MID_DOWN	= 203	# Middle down
 CHAR_BAR_MID_UP		= 202	# Middle up
+CHAR_BAR_MID_LEFT	= 204	# Middle left
+CHAR_BAR_MID_RIGHT	= 185	# Middle right
 CHAR_BAR_TL 		= 201	# Top Left
 CHAR_BAR_BL 		= 200 	# Top LEft
 CHAR_BAR_TR 		= 187 	# Top Right
 CHAR_BAR_BR 		= 188 	# Bottom Right
-
-
-
 
 ##################################################################################################################################
 #	Keybinds																													 #
@@ -1116,22 +1117,55 @@ def menu(header, options, width):
 		raise ValueError('Cannot have a menu with more than 26 items')
 
 	header_height = libtcod.console_get_height_rect(con, 0, 0, width, SCREEN_HEIGHT, header) if len(header) else 0
-	height = len(options) + header_height
+	height = len(options) + header_height + 2
 
 	window = libtcod.console_new(width, height)
 	libtcod.console_set_default_foreground(window, libtcod.white)
-	libtcod.console_print_rect_ex(window, 0, 0, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
+	libtcod.console_print_rect_ex(window, 1, 1, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
 
-	y = header_height
+	y = header_height + 1 
 	letter_index = ord('a')
 	for option_text in options:
 		text = '%s) %s' % (chr(letter_index), option_text)
-		libtcod.console_print_ex(window, 0, y, libtcod.BKGND_NONE, libtcod.LEFT, text)
+		libtcod.console_print_ex(window, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, text)
 		y += 1
 		letter_index += 1
 
 	x = SCREEN_WIDTH//2 - width//2
 	y = SCREEN_HEIGHT//2 - height//2
+
+
+	# Horizontal Lines
+	for i in range(1,width):
+		libtcod.console_put_char_ex(window, i, 0, CHAR_BAR_S_HORIZONTAL, libtcod.white, libtcod.black)
+		if len(header): 
+			libtcod.console_put_char_ex(window, i, header_height, CHAR_BAR_S_HORIZONTAL, libtcod.white, libtcod.black)
+		libtcod.console_put_char_ex(window, i, height - 1, CHAR_BAR_S_HORIZONTAL, libtcod.white, libtcod.black)
+
+	# Vertical Lines
+	for i in range(1,height):
+		libtcod.console_put_char_ex(window, 0, i, CHAR_BAR_S_VERTICAL, libtcod.white, libtcod.black)
+		libtcod.console_put_char_ex(window, width - 1, i, CHAR_BAR_S_VERTICAL, libtcod.white, libtcod.black)
+
+	# Draw the middle connector on the left
+	if len(header): 
+		libtcod.console_put_char_ex(window, 0, header_height, CHAR_BAR_S_MID_LEFT, libtcod.white, libtcod.black)
+	# Draw the middle connector on the right
+	if len(header): 
+		libtcod.console_put_char_ex(window, width - 1 , header_height, CHAR_BAR_S_MID_RIGHT, libtcod.white, libtcod.black)
+
+	# Top Left Corner
+	libtcod.console_put_char_ex(window, 0, 0, CHAR_BAR_S_TL, libtcod.white, libtcod.black)
+	# Top Right Corner
+	libtcod.console_put_char_ex(window, width - 1, 0, CHAR_BAR_S_TR, libtcod.white, libtcod.black)
+
+	# Bottom Left Corner
+	libtcod.console_put_char_ex(window, 0, height - 1, CHAR_BAR_S_BL, libtcod.white, libtcod.black)
+	# Bottom Right Corner
+	libtcod.console_put_char_ex(window, width - 1, height - 1, CHAR_BAR_S_BR, libtcod.white, libtcod.black)
+
+
+
 	libtcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, 0.7)
 
 	libtcod.console_flush()
@@ -1370,6 +1404,7 @@ def render_all():
 	# Print message label
 	libtcod.console_print_ex(panel, BAR_WIDTH + 5, 0, libtcod.BKGND_NONE, libtcod.LEFT,'Messages')
 
+	# Names of things under the mouse
 	libtcod.console_set_default_foreground(panel, libtcod.light_gray)
 	libtcod.console_print_ex(panel, 2, 1, libtcod.BKGND_NONE, libtcod.LEFT, get_names_under_mouse())
 
@@ -1530,19 +1565,19 @@ def handle_keys():
 			return ACTION_NONE
 
 		elif key_match(key, KEYS_INVENTORY):
-			item = inventory_menu("Press the key next to an item to use it or any other to cancel.\n")
+			item = inventory_menu("Inventory\n")
 			if item is not None:
 				item.use()
 			return ACTION_NONE
 
 		elif key_match(key, KEYS_DROP):
-			item = inventory_menu("Press the key next to an item to drop it or any other to cancel.\n")
+			item = inventory_menu("Drop Item\n")
 			if item is not None:
 				item.drop()
 			return ACTION_NONE
 
 		elif key_match(key, KEYS_SPELL):
-			spell = spell_menu("Press the key next to an spell to select it or any other to cancel.\n")
+			spell = spell_menu("Select Spell\n")
 			if spell is not None:
 				current_spell = spell
 			return ACTION_NONE
