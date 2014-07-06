@@ -4,6 +4,42 @@
 		"selected_items":
 		[
 			[
+				"defen",
+				"defense_factor"
+			],
+			[
+				"next",
+				"next_level_xp"
+			],
+			[
+				"level",
+				"next_level_xp"
+			],
+			[
+				"defe",
+				"defense_factor"
+			],
+			[
+				"LE",
+				"LEVEL_XP_FACTOR"
+			],
+			[
+				"get",
+				"get_random_room"
+			],
+			[
+				"current",
+				"current_spell"
+			],
+			[
+				"obj",
+				"objects"
+			],
+			[
+				"console_is",
+				"console_is_window_closed"
+			],
+			[
 				"clos",
 				"closest"
 			],
@@ -167,8 +203,17 @@
 			"file": "game.py",
 			"settings":
 			{
-				"buffer_size": 58472,
+				"buffer_size": 66756,
 				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "html:lang(sc)a[href=\"http://sc.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(hc)a[href=\"http://hc.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(ft)a[href=\"http://ft.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(io)a[href=\"http://io.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(fo)a[href=\"http://fo.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(ev)a[href=\"http://ev.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(hp)a[href=\"http://hp.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(pc)a[href=\"http://pc.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(if)a[href=\"http://if.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(ep)a[href=\"http://ep.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\nhtml:lang(ot)a[href=\"http://ot.reddit.com/r/slashdiablo/new\"] { font-weight: bold;}\n\nhtml:lang() .link:not(.linkflair-ft) {display: none;}\nhtml:lang(io) .link:not(.linkflair-iso) {display: none;}\nhtml:lang(fo) .link:not(.linkflair-ftiso) {display: none;}\nhtml:lang(sc) .link:not(.linkflair-sc) {display: none;}\nhtml:lang(hc) .link:not(.linkflair-hc) {display: none;}\nhtml:lang(ev) .link:not(.linkflair-event) {display: none;}\nhtml:lang(rp) .link:not(.linkflair-rip) {display: none;}\nhtml:lang(pc) .link:not(.linkflair-picture) {display: none;}\nhtml:lang(if) .link:not(.linkflair-info) {display: none;}\nhtml:lang(ep) .link:not(.linkflair-epeen) {display: none;}\nhtml:lang(hp) .link:not(.linkflair-help) {display: none;}\nhtml:lang(ot) .link:not(.linkflair-other) {display: none;}\nhtml:lang(md) .link:not(.linkflair-mod) {display: none;}\n\n.thing.linkflair.linkflair-a .linkflairlabel {\n    border-bottom: solid 2px #E18879;\n    border-bottom: none;\n    background-color: #E18879;\n}\n\n.thing.linkflair.linkflair-b .linkflairlabel {\n    border-bottom: solid 2px #e1aa79;\n    border-bottom: none;\n    background-color: #e1aa79;\n}\n\n.thing.linkflair.linkflair-c .linkflairlabel {\n    border-bottom: solid 2px #bbe179;\n    border-bottom: none;\n    background-color: #bbe179;\n}\n\n.thing.linkflair.linkflair-d .linkflairlabel {\n    border-bottom: solid 2px #79e1d1;\n    border-bottom: none;\n    background-color: #79e1d1;\n}\n\n.thing.linkflair.linkflair-e .linkflairlabel {\n    border-bottom: solid 2px #e1db79;\n    border-bottom: none;\n    background-color: #e1db79;\n}\n\n.thing.linkflair.linkflair-f .linkflairlabel {\n    border-bottom: solid 2px #b179e1;\n    border-bottom: none;\n    background-color: #b179e1;\n}\n\n.thing.linkflair.linkflair-g .linkflairlabel {\n    border-bottom: solid 2px #FCDFFF;\n    border-bottom: none;\n    background-color: #FCDFFF;\n}",
+			"settings":
+			{
+				"buffer_size": 2682,
+				"line_ending": "Windows",
+				"name": "html:lang(sc)a[href=\"http://sc.reddit.com/r/slashd"
 			}
 		}
 	],
@@ -199,6 +244,8 @@
 	},
 	"file_history":
 	[
+		"/C/Users/Ross/Documents/GitHub/Game/.gitignore",
+		"/C/Users/Ross/Documents/GitHub/Game/game.sublime-project",
 		"/C/Users/Ross/Documents/GitHub/Game/game.py",
 		"/C/Users/Ross/Downloads/latest16-mingw32.tar/latest16-mingw32/libtcod-1.6.0/python/game.py",
 		"/C/Users/Ross/Downloads/latest16-mingw32.tar/latest16-mingw32/libtcod-1.6.0/python/cprotos.py"
@@ -219,6 +266,13 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			".level",
+			"xp",
+			"grant",
+			"random",
+			"<",
+			"target_range",
+			"spells",
 			"get_target_at",
 			"health",
 			"libtcod.random_get_int",
@@ -272,6 +326,7 @@
 		"regex": false,
 		"replace_history":
 		[
+			"spell_list",
 			"hp",
 			"rand",
 			"ROOM_MAX_SIZE",
@@ -290,7 +345,7 @@
 	"groups":
 	[
 		{
-			"selected": 0,
+			"selected": 1,
 			"sheets":
 			[
 				{
@@ -299,15 +354,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 58472,
+						"buffer_size": 66756,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								50478,
-								50478
+								61651,
+								61651
 							]
 						],
 						"settings":
@@ -316,7 +371,35 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 19460.0,
+						"translation.y": 23998.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2682,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2682,
+								1676
+							]
+						],
+						"settings":
+						{
+							"auto_name": "html:lang(sc)a[href=\"http://sc.reddit.com/r/slashd",
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 173.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,

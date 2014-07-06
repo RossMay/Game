@@ -36,12 +36,12 @@ DISABLE_AI	= DEBUG
 LIMIT_FPS 		= 20	# Limit the speed of the main loop
 
 #	Screen Dimensions
-SCREEN_WIDTH 	= 80	# Overall screen width
-SCREEN_HEIGHT 	= 50	# Overall screen height
+SCREEN_WIDTH 	= 85	# Overall screen width
+SCREEN_HEIGHT 	= 63	# Overall screen height
 
 #	Map Dimensions
-MAP_WIDTH 		= 80	# Width of the playable map
-MAP_HEIGHT 		= 41	# Height of the playable map
+MAP_WIDTH 		= 85	# Width of the playable map
+MAP_HEIGHT 		= 50	# Height of the playable map
 
 #	Game States
 STATE_PLAYING	= 0		# Player os currently playing, each action triggers a turn
@@ -65,13 +65,12 @@ INVENTORY_WIDTH = 50							# Width of the inventory menu
 SPELL_WIDTH 	= 50							# Width of the spell menu
 
 BAR_WIDTH 		= 25							# Width of health / mana bars
-PANEL_HEIGHT 	= 9 							# Height of the bottom panel
+PANEL_HEIGHT 	= 13 							# Height of the bottom panel
 PANEL_Y 		= SCREEN_HEIGHT - PANEL_HEIGHT	# Where to start the panel
 
-MSG_X 			= BAR_WIDTH + 2 				# Where to start the message window, right after the bars
+MSG_X 			= BAR_WIDTH + 5 				# Where to start the message window, leave one space on each side plus a line
 MSG_WIDTH 		= SCREEN_WIDTH - BAR_WIDTH - 2 	# Where to end the message window, 2 from the edge of the screen
-MSG_HEIGHT 		= PANEL_HEIGHT - 1 				# Height of the message window
-
+MSG_HEIGHT 		= PANEL_HEIGHT - 4 				# Height of the message window
 
 ##################################################################################################################################
 #	Generation																													 #
@@ -110,6 +109,26 @@ CHAR_SPELL 			= ' '	# Default spell character
 CHAR_SPELL_PATH 	= ' '	# Default spell path character
 CHAR_STAIRS_DOWN	= '<'	# Stairs going down a level
 CHAR_STAIRS_UP		= '>'	# Stairs going up a level
+
+CHAR_BAR_VERTICAL   = 179	# Vertical menu bar
+CHAR_BAR_HORIZONTAL = 196	# Horizontal menu bar
+CHAR_BAR_MID_DOWN	= 194	# Middle down
+CHAR_BAR_MID_UP		= 193	# Middle up
+CHAR_BAR_TL 		= 218	# Top Left
+CHAR_BAR_BL 		= 192 	# Top LEft
+CHAR_BAR_TR 		= 191 	# Top Right
+CHAR_BAR_BR 		= 217 	# Bottom Right
+
+CHAR_BAR_VERTICAL   = 186	# Vertical menu bar
+CHAR_BAR_HORIZONTAL = 205	# Horizontal menu bar
+CHAR_BAR_MID_DOWN	= 203	# Middle down
+CHAR_BAR_MID_UP		= 202	# Middle up
+CHAR_BAR_TL 		= 201	# Top Left
+CHAR_BAR_BL 		= 200 	# Top LEft
+CHAR_BAR_TR 		= 187 	# Top Right
+CHAR_BAR_BR 		= 188 	# Bottom Right
+
+
 
 
 ##################################################################################################################################
@@ -1295,21 +1314,64 @@ def render_all():
 	libtcod.console_set_default_background(panel, libtcod.black)
 	libtcod.console_clear(panel)
 
-	y = 1
+
+	# Render the boxes around the info panel
+
+	# Horizontal Lines
+	for i in range(1,SCREEN_WIDTH):
+		libtcod.console_put_char_ex(panel, i, 0, CHAR_BAR_HORIZONTAL, libtcod.white, libtcod.black)
+		libtcod.console_put_char_ex(panel, i, PANEL_HEIGHT-1, CHAR_BAR_HORIZONTAL, libtcod.white, libtcod.black)
+
+	# Vertical Lines
+	for i in range(1,PANEL_HEIGHT-1):
+		libtcod.console_put_char_ex(panel, 0, i, CHAR_BAR_VERTICAL, libtcod.white, libtcod.black)
+		libtcod.console_put_char_ex(panel, SCREEN_WIDTH-1, i, CHAR_BAR_VERTICAL, libtcod.white, libtcod.black)
+		libtcod.console_put_char_ex(panel, BAR_WIDTH + 3, i, CHAR_BAR_VERTICAL, libtcod.white, libtcod.black)
+
+	# Draw the middle connector on the top
+	libtcod.console_put_char_ex(panel, BAR_WIDTH + 3, 0, CHAR_BAR_MID_DOWN, libtcod.white, libtcod.black)
+	# Draw the middle connector on the bottom
+	libtcod.console_put_char_ex(panel, BAR_WIDTH + 3, PANEL_HEIGHT - 1, CHAR_BAR_MID_UP, libtcod.white, libtcod.black)
+
+	# Top Left Corner
+	libtcod.console_put_char_ex(panel, 0, 0, CHAR_BAR_TL, libtcod.white, libtcod.black)
+	# Top Right Corner
+	libtcod.console_put_char_ex(panel, SCREEN_WIDTH - 1, 0, CHAR_BAR_TR, libtcod.white, libtcod.black)
+
+	# Bottom Left Corner
+	libtcod.console_put_char_ex(panel, 0, PANEL_HEIGHT - 1, CHAR_BAR_BL, libtcod.white, libtcod.black)
+	# Bottom Right Corner
+	libtcod.console_put_char_ex(panel, SCREEN_WIDTH - 1, PANEL_HEIGHT - 1, CHAR_BAR_BR, libtcod.white, libtcod.black)
+
+	# Print the messages
+	y = 2
 	for (line, color) in game_messages:
 		libtcod.console_set_default_foreground(panel, color)
 		libtcod.console_print_ex(panel, MSG_X, y, libtcod.BKGND_NONE, libtcod.LEFT, line)
 		y += 1
 
-	render_bar(1, 1, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp, libtcod.light_red, libtcod.darker_red)
-	render_bar(1, 3, BAR_WIDTH, 'MA', player.fighter.mana, player.fighter.max_mana, libtcod.light_blue, libtcod.darker_blue)
+	# Hp Bar
+	render_bar(2, 2, BAR_WIDTH, 'HP', player.fighter.hp, player.fighter.max_hp, libtcod.light_red, libtcod.darker_red)
+	# Mana Bar
+	render_bar(2, 4, BAR_WIDTH, 'MA', player.fighter.mana, player.fighter.max_mana, libtcod.light_blue, libtcod.darker_blue)
+	# XP Bar
+	render_bar(2, 6, BAR_WIDTH, 'XP', player.fighter.xp, next_level_xp(), libtcod.amber, libtcod.darker_amber)
 
+	# Print info under bars
 	libtcod.console_set_default_foreground(panel, libtcod.white)
-	libtcod.console_print_ex(panel, 1, 5, libtcod.BKGND_NONE, libtcod.LEFT,'Spell: %s' % (current_spell['name']))
-	libtcod.console_print_ex(panel, 1, 7, libtcod.BKGND_NONE, libtcod.LEFT,'Xp: %s/%s Floor: %s' % (player.fighter.xp, next_level_xp(), dungeon_level))
+	# Current Spell
+	libtcod.console_print_ex(panel, 2, 8, libtcod.BKGND_NONE, libtcod.LEFT,'Spell: %s' % (current_spell['name']))
+	# Currentl Floor
+	libtcod.console_print_ex(panel, 2, 10, libtcod.BKGND_NONE, libtcod.LEFT,'Floor: %s' % (dungeon_level))
+
+	# Print the player's name above the bar section
+	libtcod.console_print_ex(panel, 2, 0, libtcod.BKGND_NONE, libtcod.LEFT,'%s' % (player.name))
+
+	# Print message label
+	libtcod.console_print_ex(panel, BAR_WIDTH + 5, 0, libtcod.BKGND_NONE, libtcod.LEFT,'Messages')
 
 	libtcod.console_set_default_foreground(panel, libtcod.light_gray)
-	libtcod.console_print_ex(panel, 1, 0, libtcod.BKGND_NONE, libtcod.LEFT, get_names_under_mouse())
+	libtcod.console_print_ex(panel, 2, 1, libtcod.BKGND_NONE, libtcod.LEFT, get_names_under_mouse())
 
 	libtcod.console_blit(panel, 0, 0, SCREEN_WIDTH, PANEL_HEIGHT, 0, 0, PANEL_Y)
 
@@ -1847,7 +1909,7 @@ def play_game():
 
 
 
-libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
+libtcod.console_set_custom_font('font.png', libtcod.FONT_LAYOUT_ASCII_INROW)
 libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'Game', False)
 libtcod.sys_set_fps(LIMIT_FPS)
 con = libtcod.console_new(MAP_WIDTH, MAP_HEIGHT)
