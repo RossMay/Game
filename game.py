@@ -1121,38 +1121,16 @@ def menu(header, options, width):
 
 	window = libtcod.console_new(width, height)
 	libtcod.console_set_default_foreground(window, libtcod.white)
-	libtcod.console_print_rect_ex(window, 1, 1, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
-
-	y = header_height + 1 
-	letter_index = ord('a')
-	for option_text in options:
-		text = '%s) %s' % (chr(letter_index), option_text)
-		libtcod.console_print_ex(window, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, text)
-		y += 1
-		letter_index += 1
-
-	x = SCREEN_WIDTH//2 - width//2
-	y = SCREEN_HEIGHT//2 - height//2
-
 
 	# Horizontal Lines
 	for i in range(1,width):
 		libtcod.console_put_char_ex(window, i, 0, CHAR_BAR_S_HORIZONTAL, libtcod.white, libtcod.black)
-		if len(header): 
-			libtcod.console_put_char_ex(window, i, header_height, CHAR_BAR_S_HORIZONTAL, libtcod.white, libtcod.black)
 		libtcod.console_put_char_ex(window, i, height - 1, CHAR_BAR_S_HORIZONTAL, libtcod.white, libtcod.black)
 
 	# Vertical Lines
 	for i in range(1,height):
 		libtcod.console_put_char_ex(window, 0, i, CHAR_BAR_S_VERTICAL, libtcod.white, libtcod.black)
 		libtcod.console_put_char_ex(window, width - 1, i, CHAR_BAR_S_VERTICAL, libtcod.white, libtcod.black)
-
-	# Draw the middle connector on the left
-	if len(header): 
-		libtcod.console_put_char_ex(window, 0, header_height, CHAR_BAR_S_MID_LEFT, libtcod.white, libtcod.black)
-	# Draw the middle connector on the right
-	if len(header): 
-		libtcod.console_put_char_ex(window, width - 1 , header_height, CHAR_BAR_S_MID_RIGHT, libtcod.white, libtcod.black)
 
 	# Top Left Corner
 	libtcod.console_put_char_ex(window, 0, 0, CHAR_BAR_S_TL, libtcod.white, libtcod.black)
@@ -1164,7 +1142,18 @@ def menu(header, options, width):
 	# Bottom Right Corner
 	libtcod.console_put_char_ex(window, width - 1, height - 1, CHAR_BAR_S_BR, libtcod.white, libtcod.black)
 
+	libtcod.console_print_rect_ex(window, 1, 0, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
 
+	y = header_height + (0 if len(header) else 1)
+	letter_index = ord('a')
+	for option_text in options:
+		text = '%s) %s' % (chr(letter_index), option_text)
+		libtcod.console_print_ex(window, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, text)
+		y += 1
+		letter_index += 1
+
+	x = SCREEN_WIDTH//2 - width//2
+	y = SCREEN_HEIGHT//2 - height//2
 
 	libtcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, 0.7)
 
