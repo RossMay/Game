@@ -1,7 +1,7 @@
 from __future__ import division
 import libtcodpy as libtcod
 from libtcodpy import random_get_int as rand
-import math, textwrap, time, sys, shelve
+import math, textwrap, time, sys, shelve, os
 
 
 ##################################################################################################################################
@@ -63,6 +63,8 @@ FOV_LIGHT_WALLS = True	# Should the first layer of walls light up while in fov (
 #	UI
 INVENTORY_WIDTH = 50							# Width of the inventory menu
 SPELL_WIDTH 	= 50							# Width of the spell menu
+SAVE_WIDTH		= 50							# Width of the save menu
+EXIT_MENU_WIDTH	= 30 							# Width of thr save/exit menu in game
 
 BAR_WIDTH 		= 25							# Width of health / mana bars
 PANEL_HEIGHT 	= 13 							# Height of the bottom panel
@@ -705,7 +707,7 @@ def player_death(player):
 	player.color = libtcod.dark_red
 
 def monster_death(monster):
-	message("%s is slain." % monster.name, libtcod.orange)
+	message("You slay %s and gain %s experience." % (monster.name, monster.fighter.xp), libtcod.orange)
 
 	monster.char = CHAR_CORPSE
 	monster.color = libtcod.dark_red
@@ -1112,12 +1114,12 @@ def get_targets_around(x,y,radius, friendly=None, enemy=None, self=False):
 #	Menu System																													 #
 ##################################################################################################################################
 
-def menu(header, options, width):
+def menu(header, options, width, opacity = 0.7):
 	if len(options) > 26: 
 		raise ValueError('Cannot have a menu with more than 26 items')
 
-	header_height = libtcod.console_get_height_rect(con, 0, 0, width, SCREEN_HEIGHT, header) if len(header) else 0
-	height = len(options) + header_height + 2
+	header_height = 1
+	height = len(options) + header_height + 3
 
 	window = libtcod.console_new(width, height)
 	libtcod.console_set_default_foreground(window, libtcod.white)
@@ -1144,20 +1146,21 @@ def menu(header, options, width):
 
 	libtcod.console_print_rect_ex(window, 1, 0, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
 
-	y = header_height + (0 if len(header) else 1)
+	y = 2
 	letter_index = ord('a')
 	for option_text in options:
 		text = '%s) %s' % (chr(letter_index), option_text)
-		libtcod.console_print_ex(window, 1, y, libtcod.BKGND_NONE, libtcod.LEFT, text)
+		libtcod.console_print_ex(window, 2, y, libtcod.BKGND_NONE, libtcod.LEFT, text)
 		y += 1
 		letter_index += 1
 
 	x = SCREEN_WIDTH//2 - width//2
 	y = SCREEN_HEIGHT//2 - height//2
 
-	libtcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, 0.7)
+	libtcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, opacity)
 
 	libtcod.console_flush()
+	time.sleep(0.1)
 	key = libtcod.console_wait_for_keypress(True)
 
 	index = key.c - ord('a')
@@ -1174,7 +1177,7 @@ def main_menu():
 		libtcod.console_set_default_foreground(0, libtcod.light_yellow)
 		libtcod.console_print_ex(0, int(SCREEN_WIDTH/2), int(SCREEN_HEIGHT/2)-4, libtcod.BKGND_NONE, libtcod.CENTER, 'FUTURE TITLE HERE')
 
-		choice = menu('', ['New Game', 'Continue', 'Load', 'Quit'], 24)
+		choice = menu('', ['New Game', 'Load', 'Quit'], 24)
 
 		if key.vk in KEYS_FULLSCREEN:
 			libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
@@ -1184,21 +1187,34 @@ def main_menu():
 			play_game()
 
 		elif choice == 1:
-			if not game_started:
-				new_game()
-			play_game()
-
-		elif choice == 2:
-			try:
-				load_game()
-			except:
-				msgbox('\nError loading game.\n', 24)
+			#try:
+			slot = saveslot_menu("Load Game")
+			if slot is None:
 				continue
-			play_game()
-
-		elif choice == 3:
-			save_game()
+			else:
+				try:
+					load_game(slot)
+					play_game()
+				except:
+					new_game()
+					play_game()
+		elif choice == 2:
 			break
+
+def saveslot_menu(header):
+	slots = []
+	for i in range(0,10):
+		try:
+			saveinfo = shelve.open('savegame%s.info' % i, 'r')
+			slots.append(saveinfo['infostring'])
+		except:
+			slots.append("New Game")
+	slot = menu(header, slots, SAVE_WIDTH, opacity = 1.0)
+
+	if slot == None:
+		return False
+	else:
+		return slot
 
 def inventory_menu(header):
 	if len(inventory) == 0:
@@ -1803,8 +1819,8 @@ player_config = {
 ##################################################################################################################################
 ##################################################################################################################################
 
-def save_game():
-	savefile = shelve.open('savegame', 'n')
+def save_game(slot):
+	savefile = shelve.open('savegame%s' % slot, 'n')
 
 	savefile['map']				= level_map
 	savefile['objects'] 		= objects
@@ -1821,10 +1837,16 @@ def save_game():
 
 	savefile.close()
 
-def load_game():
-	global level_map, objects, spell_list, inventory, game_messages, game_state, current_spell, temp_spell, target_coords, player, game_started, stairs_down, dungeon_level
+	saveinfo = shelve.open('savegame%s.info' % slot, 'n')
 
-	savefile = shelve.open('savegame', 'r')
+	saveinfo['infostring'] = "%s Level %s %s" % (player.name, player.fighter.level, 'Warrior')
+
+	saveinfo.close()
+
+def load_game(slot):
+	global level_map, objects, spell_list, inventory, game_messages, game_state, current_spell, temp_spell, target_coords, player, stairs_down, dungeon_level
+
+	savefile = shelve.open('savegame%s' % slot, 'r')
 
 	level_map 		= savefile['map']
 	objects 		= savefile['objects']
@@ -1843,10 +1865,8 @@ def load_game():
 
 	init_fov()
 
-	game_started = True
-
 def new_game():
-	global player, game_state, inventory, spell_list, current_spell, temp_spell, game_messages, game_started, dungeon_level
+	global player, game_state, inventory, spell_list, current_spell, temp_spell, game_messages, dungeon_level
 
 	player = Object(
 				x=0, 
@@ -1888,10 +1908,6 @@ def new_game():
 
 	game_messages = []
 
-	game_started = True
-
-
-
 	#message('Kill all of the monsters!', libtcod.red)
 
 def next_level():
@@ -1929,7 +1945,19 @@ def play_game():
 					obj.ai.take_turn()
 
 		if player_action == ACTION_EXIT: 
-			break
+			choice = menu("Return to Main Menu", ['Save and Quit', 'Quit Without Saving', 'Cancel'], EXIT_MENU_WIDTH)
+
+			if choice == 0:
+				slot = saveslot_menu("Save Game")
+				if slot is not None:
+					save_game(slot)
+					break
+				else:
+					continue
+			elif choice == 1:
+				break
+			else:
+				continue
 
 
 
@@ -1943,9 +1971,6 @@ libtcod.console_set_key_color(spell_con,COLOR_TRANSPARENT)
 
 mouse = libtcod.Mouse()
 key = libtcod.Key()
-
-game_started = False
-
 
 main_menu()
 
