@@ -1118,8 +1118,7 @@ def menu(header, options, width, opacity = 0.7):
 	if len(options) > 26: 
 		raise ValueError('Cannot have a menu with more than 26 items')
 
-	header_height = 1
-	height = len(options) + header_height + 3
+	height = len(options) + 4
 
 	window = libtcod.console_new(width, height)
 	libtcod.console_set_default_foreground(window, libtcod.white)
@@ -1237,6 +1236,70 @@ def spell_menu(header):
 
 	if index is None or len(spell_list) == 0: return None
 	return spell_list[index]
+
+def input_box(header, default, minl=1, maxl=10, opacity=1.0):
+
+	height = 5
+	width = maxl + 4
+
+	window = libtcod.console_new(width, height)
+
+
+	x = SCREEN_WIDTH//2 - width//2
+	y = SCREEN_HEIGHT//2 - height//2
+
+	while True:
+		libtcod.console_set_default_foreground(window, libtcod.white)
+
+		# Horizontal Lines
+		for i in range(1,width):
+			libtcod.console_put_char_ex(window, i, 0, CHAR_BAR_S_HORIZONTAL, libtcod.white, libtcod.black)
+			libtcod.console_put_char_ex(window, i, height - 1, CHAR_BAR_S_HORIZONTAL, libtcod.white, libtcod.black)
+
+		# Vertical Lines
+		for i in range(1,height):
+			libtcod.console_put_char_ex(window, 0, i, CHAR_BAR_S_VERTICAL, libtcod.white, libtcod.black)
+			libtcod.console_put_char_ex(window, width - 1, i, CHAR_BAR_S_VERTICAL, libtcod.white, libtcod.black)
+
+		# Top Left Corner
+		libtcod.console_put_char_ex(window, 0, 0, CHAR_BAR_S_TL, libtcod.white, libtcod.black)
+		# Top Right Corner
+		libtcod.console_put_char_ex(window, width - 1, 0, CHAR_BAR_S_TR, libtcod.white, libtcod.black)
+
+		# Bottom Left Corner
+		libtcod.console_put_char_ex(window, 0, height - 1, CHAR_BAR_S_BL, libtcod.white, libtcod.black)
+		# Bottom Right Corner
+		libtcod.console_put_char_ex(window, width - 1, height - 1, CHAR_BAR_S_BR, libtcod.white, libtcod.black)
+
+		libtcod.console_print_rect_ex(window, 1, 0, width, height, libtcod.BKGND_NONE, libtcod.LEFT, header)
+
+		libtcod.console_print_ex(window, 2, 2, libtcod.BKGND_NONE, libtcod.LEFT, '_' * maxl)
+		libtcod.console_print_ex(window, 2, 2, libtcod.BKGND_NONE, libtcod.LEFT, default)
+
+		libtcod.console_blit(window, 0, 0, width, height, 0, x, y, 1.0, opacity)
+
+
+		libtcod.console_flush()
+
+		time.sleep(0.1)
+		key = libtcod.console_wait_for_keypress(True)
+
+		if key.vk in [libtcod.KEY_KPENTER, libtcod.KEY_ENTER]:
+			if len(default) > minl:
+				return default
+			else: continue
+		elif key.vk  == libtcod.KEY_ESCAPE:
+			return None
+		elif key.c >= 65 and key.c <= 122 and len(default) < maxl:
+			default += chr(key.c)
+		elif key.vk == libtcod.KEY_BACKSPACE and len(default) > 0:
+			default = default[:len(default)-1]
+		else:
+			continue
+
+
+	return None
+
 
 ##################################################################################################################################
 #	UI Utilities																												 #
@@ -1839,7 +1902,7 @@ def save_game(slot):
 
 	saveinfo = shelve.open('savegame%s.info' % slot, 'n')
 
-	saveinfo['infostring'] = "%s Level %s %s" % (player.name, player.fighter.level, 'Warrior')
+	saveinfo['infostring'] = "%s - Level %s %s" % (player.name, player.fighter.level, 'Warrior')
 
 	saveinfo.close()
 
@@ -1868,11 +1931,13 @@ def load_game(slot):
 def new_game():
 	global player, game_state, inventory, spell_list, current_spell, temp_spell, game_messages, dungeon_level
 
+	name = input_box('Name', player_config['name'])
+
 	player = Object(
 				x=0, 
 				y=0, 
 				char=player_config['char'], 
-				name=player_config['name'], 
+				name=name, 
 				color=player_config['color'], 
 				blocks=True, 
 				fighter=Fighter(
